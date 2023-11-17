@@ -1,0 +1,624 @@
+
+#include "resource.h"
+
+
+
+
+IDB_BACK                               BITMAP                  "Background.bmp"
+
+IDB_ADAPTER_CHOICE_BACK                BITMAP                  "AdapterChoiceBckg.bmp"
+IDB_ADAPTER_INFO_BACK                  BITMAP                  "AdapterInfoBckg.bmp"
+IDB_ADAPTER_MODE_BACK                  BITMAP                  "AdapterModeBckg.bmp"
+IDB_MINIPORT_CHOICE_BACK               BITMAP                  "MiniportChoiceBckg.bmp"
+IDB_MINIPORT_INFO_BACK                 BITMAP                  "MiniportInfoBckg.bmp"
+IDB_PROT_FILTER_BACK                   BITMAP                  "ProtocolFilterBckg.bmp"
+
+IDB_MP_FILTER__SEND_BACK               BITMAP                  "MiniportSendFilterBckg.bmp"
+IDB_MP_FILTER_RECV_BACK                BITMAP                  "MiniportRecvFilterBckg.bmp"
+
+IDB_OK                                 BITMAP                  "ButtonOk.bmp"
+IDB_OK_                                BITMAP                  "ButtonOk_.bmp"
+IDB_ANULUJ                             BITMAP                  "ButtonAnuluj.bmp"
+IDB_ANULUJ_                            BITMAP                  "ButtonAnuluj_.bmp"
+IDB_ZATW                               BITMAP                  "ButtonZatw.bmp"
+IDB_ANUL                               BITMAP                  "ButtonAnul.bmp"
+
+IDB_CLEAR_TABLE_1                      BITMAP                  "ClearTable_1.bmp"
+IDB_CLEAR_TABLE_2                      BITMAP                  "ClearTable_2.bmp"
+IDB_SAVE_TABLE_1                       BITMAP                  "SaveTable_1.bmp"
+IDB_SAVE_TABLE_2                       BITMAP                  "SaveTable_2.bmp"
+IDB_SEARCH_TABLE_1                     BITMAP                  "SearchTable_1.bmp"
+IDB_SEARCH_TABLE_2                     BITMAP                  "SearchTable_2.bmp"
+IDB_SHOW_TABLE_1                       BITMAP                  "ShowTable_1.bmp"
+IDB_SHOW_TABLE_2                       BITMAP                  "ShowTable_2.bmp"
+
+
+
+//CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "LanHack_Ex.exe.manifest.xml"
+
+
+
+
+ID_MANIFEST RT_MANIFEST "LanHack_Ex.exe.manifest.xml"
+
+
+
+
+IDI_ICON ICON   "Icon.ico"
+
+
+
+/*
+        -------------------------------------------Tabela ci¹gu znaków--------------------------------------------------------------------
+
+*/
+
+
+STRINGTABLE
+BEGIN
+    IDS_MENU_APLIKACJA          "Aplikacja"
+    IDS_APLIKACJA_SYSTRAY       "Aplikacja w tle"
+    IDS_APLIKACJA_KONIEC        "Koniec"
+
+    IDS_ADAPTER				    "Karta sieciowa"
+    IDS_ADAPTER_POLACZ		    "Otwórz adapter"
+    IDS_ADAPTER_ZAMKNIJ		    "Zamknij adapter"
+    IDS_ADAPTER_INFO		    "Atrybuty karty sieciowej"
+    IDS_ADAPTER_MODE		    "Tryby pracy karty sieciowej"
+
+    IDS_MINIPORT		        "Miniporty"
+    IDS_MINIPORT_INFO		    "Zainstalowane miniporty"
+    IDS_MINIPORT_SLUCHAJ		"Wlacz nasluchiwanie"
+    IDS_MINIPORT_ZAMKNIJ		"Zamknij nasluchiwanie"
+
+    IDS_TABELA                  "Tabele pakietów"
+    IDS_TABELA_POK              "Pokaz pakiety odebrane"
+    IDS_TABELA_UKR              "Ukryj pakiety odebrane"
+    IDS_TABELA_POK_MAC          "Pokaz adresy MAC odebranych"
+    IDS_TABELA_UKR_MAC          "Ukryj adresy MAC odebranych"
+
+    IDS_TABELA_SEND_POK         "Pokaz pakiety wyslane"
+    IDS_TABELA_SEND_UKR         "Ukryj pakiety wyslane"
+    IDS_TABELA_SEND_POK_MAC     "Pokaz adresy MAC wyslanych"
+    IDS_TABELA_SEND_UKR_MAC     "Ukryj adresy MAC wyslanych"
+
+    IDS_TABELA_PROT_POK         "Pokaz pakiety protokolu"
+    IDS_TABELA_PROT_UKR         "Ukryj pakiety protokolu"
+    IDS_TABELA_PROT_POK_MAC     "Pokaz adresy MAC protokolu"
+    IDS_TABELA_PROT_UKR_MAC     "Ukryj adresy MAC protokolu"
+
+    IDS_TABELA_FILTR            "Filtrowanie"
+    IDS_TABELA_RECV_FILTR       "Filtruj pakiety odebrane"
+    IDS_TABELA_RECV_NOFILTR     "Wylacz filtr pakietów odebranych"
+    IDS_TABELA_SEND_FILTR       "Filtruj pakiety wysylane"
+    IDS_TABELA_SEND_NOFILTR     "Wylacz filtr pakietów wysylanych"
+    IDS_TABELA_PROT_FILTR       "Filtruj pakiety protokolu"
+    IDS_TABELA_PROT_NOFILTR     "Wylacz filtr pakietów protokolu"
+
+
+    //----------------------------------------Medium Adaptera Sieciowego
+
+
+    IDS_Unspecified             "PhysicalMediumUnspecified"
+    IDS_WirelessLan             "PhysicalMediumWirelessLan"
+    IDS_CableModem              "PhysicalMediumCableModem"
+    IDS_PhoneLine			    "PhysicalMediumPhoneLine"
+    IDS_PowerLine		        "PhysicalMediumPowerLine"
+    IDS_DSL		                "PhysicalMediumDSL"
+    IDS_FibreChannel		    "PhysicalMediumFibreChannel"
+    IDS_Medium1394              "PhysicalMedium1394"
+    IDS_WirelessWan             "PhysicalMediumWirelessWan"
+    IDS_MediumNative802_11      "PhysicalMediumNative802_11"
+    IDS_MediumBluetooth		    "PhysicalMediumBluetooth"
+    IDS_MediumInfiniband	    "PhysicalMediumInfiniband"
+    IDS_MediumWiMax		        "PhysicalMediumWiMax"
+    IDS_MediumUWB		        "PhysicalMediumUWB"
+    IDS_Medium802_3             "PhysicalMedium802_3"
+    IDS_Medium802_5             "PhysicalMedium802_5"
+    IDS_MediumIrda              "PhysicalMediumIrda"
+    IDS_MediumWiredWAN		    "PhysicalMediumWiredWAN"
+    IDS_MediumWiredCoWan	    "PhysicalMediumWiredCoWan"
+    IDS_MediumOther		        "PhysicalMediumOther"
+    IDS_MediumNative802_15_4    "PhysicalMediumNative802_15_4"
+    IDS_MediumMax		        "PhysicalMediumMax"
+
+
+
+
+/*
+        -------------------------------------------Nazwy kolumn tabel pakietów--------------------------------------------------------------------
+
+*/
+    IDS_LC1						"RAMKA_NR"
+    IDS_LC2						"TYP"
+    IDS_LC3						"PODTYP"
+    IDS_LC4						"ADRES MAC 1"
+    IDS_LC5						"ADRES MAC 2"
+    IDS_LC6						"ADRES MAC 3"
+    IDS_LC7						"ADRES MAC 4"
+    IDS_LC8						"TYP PAKIETU"
+    IDS_LC9						"PROTOKÓ£"
+    IDS_LC10					"ADRES ZRODLOWY"
+    IDS_LC11					"ADRES DOCELOWY"
+
+
+/*
+        -------------------------------------------Rodzaje podtypów pakietów --------------------------------------------------------------------
+
+*/
+
+    IDS_SUBTYPE_MNAGMENT_0		"Association Request"
+    IDS_SUBTYPE_MNAGMENT_1		"Association Response"
+    IDS_SUBTYPE_MNAGMENT_2		"Reassociation Request"
+    IDS_SUBTYPE_MNAGMENT_3		"Reassociation Response"
+    IDS_SUBTYPE_MNAGMENT_4		"Probe Request"
+    IDS_SUBTYPE_MNAGMENT_5		"Probe Response"
+    IDS_SUBTYPE_MNAGMENT_6		"Timing Advertisement"
+    IDS_SUBTYPE_MNAGMENT_7		"Reserved"
+    IDS_SUBTYPE_MNAGMENT_8		"Beacon"
+    IDS_SUBTYPE_MNAGMENT_9		"ATIM"
+    IDS_SUBTYPE_MNAGMENT_10		"Disassociation"
+    IDS_SUBTYPE_MNAGMENT_11		"Authentication"
+    IDS_SUBTYPE_MNAGMENT_12		"Deauthentication"
+    IDS_SUBTYPE_MNAGMENT_13		"Action"
+    IDS_SUBTYPE_MNAGMENT_14		"Action No Ack (NACK)"
+    IDS_SUBTYPE_MNAGMENT_15		"Reserved"
+
+    IDS_SUBTYPE_CONTROL_0		"Reserved"
+    IDS_SUBTYPE_CONTROL_1		"Reserved"
+    IDS_SUBTYPE_CONTROL_2		"Trigger"
+    IDS_SUBTYPE_CONTROL_3		"TACK"
+    IDS_SUBTYPE_CONTROL_4		"Beamforming Report Poll"
+    IDS_SUBTYPE_CONTROL_5		"VHT/HE NDP Announcement"
+    IDS_SUBTYPE_CONTROL_6		"Control Frame Extension"
+    IDS_SUBTYPE_CONTROL_7		"Control Wrapper"
+    IDS_SUBTYPE_CONTROL_8		"Block Ack Request (BAR)"
+    IDS_SUBTYPE_CONTROL_9		"Block Ack (BA)"
+    IDS_SUBTYPE_CONTROL_10		"PS-Poll"
+    IDS_SUBTYPE_CONTROL_11		"RTS"
+    IDS_SUBTYPE_CONTROL_12		"CTS"
+    IDS_SUBTYPE_CONTROL_13		"ACK"
+    IDS_SUBTYPE_CONTROL_14		"CF-End"
+    IDS_SUBTYPE_CONTROL_15		"CF-End + CF-ACK"
+
+    IDS_SUBTYPE_DATA_0		    "Data"
+    IDS_SUBTYPE_DATA_1		    "Reserved"
+    IDS_SUBTYPE_DATA_2		    "Reserved"
+    IDS_SUBTYPE_DATA_3		    "Reserved"
+    IDS_SUBTYPE_DATA_4		    "Null (no data)"
+    IDS_SUBTYPE_DATA_5		    "Reserved"
+    IDS_SUBTYPE_DATA_6		    "Reserved"
+    IDS_SUBTYPE_DATA_7		    "Reserved"
+    IDS_SUBTYPE_DATA_8		    "QoS Data"
+    IDS_SUBTYPE_DATA_9		    "QoS Data + CF-ACK"
+    IDS_SUBTYPE_DATA_10		    "QoS Data + CF-Poll"
+    IDS_SUBTYPE_DATA_11		    "QoS Data + CF-ACK + CF-Poll"
+    IDS_SUBTYPE_DATA_12		    "QoS Null (no data)"
+    IDS_SUBTYPE_DATA_13		    "Reserved"
+    IDS_SUBTYPE_DATA_14		    "QoS CF-Poll (no data)"
+    IDS_SUBTYPE_DATA_15		    "QoS CF-ACK + CF-Poll (no data)"
+
+    IDS_SUBTYPE_EXTENSION_0		    "DMG Beacon"
+    IDS_SUBTYPE_EXTENSION_1		    "S1G Beacon"
+    IDS_SUBTYPE_EXTENSION_2		    "Reserved"
+
+
+
+/*
+        -------------------------------------------Typy pakietów--------------------------------------------------------------------
+
+ */
+
+    IDS_ET_TYPE_0					"IPv4"
+    IDS_ET_TYPE_1					"ARP"
+    IDS_ET_TYPE_2					"Wake-on-LAN"
+    IDS_ET_TYPE_3					"AVTP"
+    IDS_ET_TYPE_4					"IETF TRILL Protocol"
+    IDS_ET_TYPE_5					"Stream Reservation Protocol"
+    IDS_ET_TYPE_6					"DEC MOP RC"
+    IDS_ET_TYPE_7					"DECnet Phase IV, DNA Routing"
+    IDS_ET_TYPE_8					"DEC LAT"
+    IDS_ET_TYPE_9					"RARP"
+    IDS_ET_TYPE_10					"AppleTalk"
+    IDS_ET_TYPE_11					"AARP"
+    IDS_ET_TYPE_12					"VLAN-tagged frame (IEEE 802.1Q)"
+    IDS_ET_TYPE_13					"SLPP"
+    IDS_ET_TYPE_14					"VLACP"
+    IDS_ET_TYPE_15					"IPX"
+    IDS_ET_TYPE_16					"QNX Qnet"
+    IDS_ET_TYPE_17					"IPv6"
+    IDS_ET_TYPE_18					"Ethernet flow control"
+    IDS_ET_TYPE_19					"LACP"
+    IDS_ET_TYPE_20					"CobraNet"
+    IDS_ET_TYPE_21					"MPLS unicast"
+    IDS_ET_TYPE_22					"MPLS multicast"
+    IDS_ET_TYPE_23					"PPPoE Discovery Stage"
+    IDS_ET_TYPE_24					"PPPoE Session Stage"
+    IDS_ET_TYPE_25					"HomePlug 1.0 MME"
+    IDS_ET_TYPE_26					"EAP over LAN (IEEE 802.1X)"
+    IDS_ET_TYPE_27					"PROFINET Protocol"
+    IDS_ET_TYPE_28					"HyperSCSI (SCSI over Ethernet)"
+    IDS_ET_TYPE_29					"ATA over Ethernet"
+    IDS_ET_TYPE_30					"EtherCAT Protocol"
+    IDS_ET_TYPE_31					"(S-Tag) on Q-in-Q tunnel"
+    IDS_ET_TYPE_32					"Ethernet Powerlink"
+    IDS_ET_TYPE_33					"GOOSE"
+    IDS_ET_TYPE_34					"GSE"
+    IDS_ET_TYPE_35					"SV (Sampled Value Transmission)"
+    IDS_ET_TYPE_36					"MikroTik RoMON"
+    IDS_ET_TYPE_37					"LLDP"
+    IDS_ET_TYPE_38					"SERCOS III"
+    IDS_ET_TYPE_39					"HomePlug Green PHY"
+    IDS_ET_TYPE_40					"Media Redundancy Protocol"
+    IDS_ET_TYPE_41					"IEEE 802.1AE MAC security (MACsec)"
+    IDS_ET_TYPE_42					"Provider Backbone Bridges (PBB)"
+    IDS_ET_TYPE_43					"Precision Time Protocol (PTP)"
+    IDS_ET_TYPE_44					"NC-SI"
+    IDS_ET_TYPE_45					"Parallel Redundancy Protocol (PRP)"
+    IDS_ET_TYPE_46					"(CFM) Protocol / ITU-T Recommendation"
+    IDS_ET_TYPE_47					"Fibre Channel over Ethernet (FCoE)"
+    IDS_ET_TYPE_48					"FCoE Initialization Protocol"
+    IDS_ET_TYPE_49					"RDMA over Converged Ethernet (RoCE)"
+    IDS_ET_TYPE_50					"TTEthernet Protocol Control Frame (TTE)"
+    IDS_ET_TYPE_51					"1905.1 IEEE Protocol"
+    IDS_ET_TYPE_52					"High-availability Seamless Redundancy (HSR)"
+    IDS_ET_TYPE_53					"Ethernet Configuration Testing"
+    IDS_ET_TYPE_54					"Redundancy Tag"
+
+
+
+/*
+        -------------------------------------------Typy protoko³u IP--------------------------------------------------------------------
+
+*/
+
+     IDS_IP_TYPE_0					"HOPOPT"
+     IDS_IP_TYPE_1					"ICMP"
+     IDS_IP_TYPE_2					"IGMP"
+     IDS_IP_TYPE_3					"GGP"
+     IDS_IP_TYPE_4					"IP-in-IP"
+     IDS_IP_TYPE_5					"ST"
+     IDS_IP_TYPE_6					"TCP"
+     IDS_IP_TYPE_7					"CBT"
+     IDS_IP_TYPE_8					"EGP"
+     IDS_IP_TYPE_9					"IGP"
+     IDS_IP_TYPE_10					"BBN-RCC-MON"
+     IDS_IP_TYPE_11					"NVP-II"
+     IDS_IP_TYPE_12					"PUP"
+     IDS_IP_TYPE_13					"ARGUS"
+     IDS_IP_TYPE_14					"EMCON"
+     IDS_IP_TYPE_15					"XNET"
+     IDS_IP_TYPE_16					"CHAOS"
+     IDS_IP_TYPE_17					"UDP"
+     IDS_IP_TYPE_18					"MUX"
+     IDS_IP_TYPE_19					"DCN-MEAS"
+     IDS_IP_TYPE_20					"HMP"
+     IDS_IP_TYPE_21					"PRM"
+     IDS_IP_TYPE_22					"XNS-IDP"
+     IDS_IP_TYPE_23					"TRUNK-1"
+     IDS_IP_TYPE_24					"TRUNK-2"
+     IDS_IP_TYPE_25					"LEAF-1"
+     IDS_IP_TYPE_26					"LEAF-2"
+     IDS_IP_TYPE_27					"RDP"
+     IDS_IP_TYPE_28					"IRTP"
+     IDS_IP_TYPE_29					"ISO-TP4"
+     IDS_IP_TYPE_30					"NETBLT"
+     IDS_IP_TYPE_31					"MFE-NSP"
+     IDS_IP_TYPE_32					"MERIT-INP"
+     IDS_IP_TYPE_33					"DCCP"
+     IDS_IP_TYPE_34					"3PC"
+     IDS_IP_TYPE_35					"IDPR"
+     IDS_IP_TYPE_36					"XTP"
+     IDS_IP_TYPE_37					"DDP"
+     IDS_IP_TYPE_38					"IDPR-CMTP"
+     IDS_IP_TYPE_39					"TP++"
+     IDS_IP_TYPE_40					"IL"
+     IDS_IP_TYPE_41					"IPV6"
+     IDS_IP_TYPE_42					"SDRP"
+     IDS_IP_TYPE_43					"IPv6-Route"
+     IDS_IP_TYPE_44					"IPv6-Frag"
+     IDS_IP_TYPE_45					"IDRP"
+     IDS_IP_TYPE_46					"RSVP"
+     IDS_IP_TYPE_47					"GRE"
+     IDS_IP_TYPE_48					"DSR"
+     IDS_IP_TYPE_49					"BNA"
+     IDS_IP_TYPE_50					"ESP"
+     IDS_IP_TYPE_51					"AH"
+     IDS_IP_TYPE_52					"I-NLSP"
+     IDS_IP_TYPE_53					"SwIPe"
+     IDS_IP_TYPE_54					"NARP"
+     IDS_IP_TYPE_55					"MOBILE"
+     IDS_IP_TYPE_56					"TLSP"
+     IDS_IP_TYPE_57					"SKIP"
+     IDS_IP_TYPE_58					"IPv6-ICMP"
+     IDS_IP_TYPE_59					"IPv6-NoNxt"
+     IDS_IP_TYPE_60					"IPv6-Opts"
+     IDS_IP_TYPE_61					"Any host internal protocol"
+     IDS_IP_TYPE_62					"CFTP"
+     IDS_IP_TYPE_63					"Any local network"
+     IDS_IP_TYPE_64					"SAT-EXPAK"
+     IDS_IP_TYPE_65					"KRYPTOLAN"
+     IDS_IP_TYPE_66					"RVD"
+     IDS_IP_TYPE_67					"IPPC"
+     IDS_IP_TYPE_68					"Any distributed file system"
+     IDS_IP_TYPE_69					"SAT-MON"
+     IDS_IP_TYPE_70					"VISA"
+     IDS_IP_TYPE_71					"IPCU"
+     IDS_IP_TYPE_72				    "CPNX"
+     IDS_IP_TYPE_73					"CPHB"
+     IDS_IP_TYPE_74					"WSN"
+     IDS_IP_TYPE_75					"PVP"
+     IDS_IP_TYPE_76					"BR-SAT-MON"
+     IDS_IP_TYPE_77					"SUN-ND"
+     IDS_IP_TYPE_78					"WB-MON"
+     IDS_IP_TYPE_79					"WB-EXPAK"
+     IDS_IP_TYPE_80					"ISO-IP"
+     IDS_IP_TYPE_81					"VMTP"
+     IDS_IP_TYPE_82					"SECURE-VMTP"
+     IDS_IP_TYPE_83					"VINES"
+     IDS_IP_TYPE_84					"TTP"
+     IDS_IP_TYPE_85					"NSFNET-IGP"
+     IDS_IP_TYPE_86					"DGP"
+     IDS_IP_TYPE_87					"TCF"
+     IDS_IP_TYPE_88					"EIGRP"
+     IDS_IP_TYPE_89					"OSPF"
+     IDS_IP_TYPE_90					"Sprite-RPC"
+     IDS_IP_TYPE_91					"LARP"
+     IDS_IP_TYPE_92					"MTP"
+     IDS_IP_TYPE_93					"AX.25"
+     IDS_IP_TYPE_94					"OS"
+     IDS_IP_TYPE_95					"MICP"
+     IDS_IP_TYPE_96					"SCC-SP"
+     IDS_IP_TYPE_97					"ETHERIP"
+     IDS_IP_TYPE_98					"ENCAP"
+     IDS_IP_TYPE_99					"Any private encryption scheme"
+     IDS_IP_TYPE_100				"GMTP"
+     IDS_IP_TYPE_101				"IFMP"
+     IDS_IP_TYPE_102				"PNNI"
+     IDS_IP_TYPE_103				"PIM"
+     IDS_IP_TYPE_104				"ARIS"
+     IDS_IP_TYPE_105				"SCPS"
+     IDS_IP_TYPE_106				"QNX"
+     IDS_IP_TYPE_107				"A/N"
+     IDS_IP_TYPE_108				"IPComp"
+     IDS_IP_TYPE_109				"SNP"
+     IDS_IP_TYPE_110				"Compaq-Peer"
+     IDS_IP_TYPE_111				"IPX-in-IP"
+     IDS_IP_TYPE_112				"VRRP"
+     IDS_IP_TYPE_113				"PGM"
+     IDS_IP_TYPE_114				"Any 0-hop protocol"
+     IDS_IP_TYPE_115				"L2TP"
+     IDS_IP_TYPE_116				"DDX"
+     IDS_IP_TYPE_117				"IATP"
+     IDS_IP_TYPE_118				"STP"
+     IDS_IP_TYPE_119				"SRP"
+     IDS_IP_TYPE_120				"UTI"
+     IDS_IP_TYPE_121				"SMP"
+     IDS_IP_TYPE_122				"SM"
+     IDS_IP_TYPE_123				"PTP"
+     IDS_IP_TYPE_124				"IS-IS over IPv4"
+     IDS_IP_TYPE_125				"FIRE"
+     IDS_IP_TYPE_126				"CRTP"
+     IDS_IP_TYPE_127				"CRUDP"
+     IDS_IP_TYPE_128				"SSCOPMCE"
+     IDS_IP_TYPE_129				"IPLT"
+     IDS_IP_TYPE_130				"SPS"
+     IDS_IP_TYPE_131				"PIPE"
+     IDS_IP_TYPE_132				"SCTP"
+     IDS_IP_TYPE_133				"FC"
+     IDS_IP_TYPE_134				"RSVP-E2E-IGNORE"
+     IDS_IP_TYPE_135				"Mobility Header"
+     IDS_IP_TYPE_136				"UDPLite"
+     IDS_IP_TYPE_137				"MPLS-in-IP"
+     IDS_IP_TYPE_138				"manet"
+     IDS_IP_TYPE_139				"HIP"
+     IDS_IP_TYPE_140				"Shim6"
+     IDS_IP_TYPE_141				"WESP"
+     IDS_IP_TYPE_142				"ROHC"
+     IDS_IP_TYPE_143				"Ethernet"
+
+
+//--------------------------------------Operation Mode karty sieciowej
+
+
+    IDS_OP_MODE_UNKOWN	            "UNKOWN"
+    IDS_OP_MODE_STATION				"STATION"
+    IDS_OP_MODE_AP					"ACCES POINT"
+    IDS_OP_MODE_EXTENSIBLE_STATION	"EXTENSIBLE STATION"
+    IDS_OP_MODE_EXTENSIBLE_AP		"EXTENSIBLE ACCES POINT"
+    IDS_OP_MODE_WFD_DEVICE 			"WFD DEVICE"
+    IDS_OP_MODE_WFD_GROUP_OWNER		"WFD GROUP OWNER"
+    IDS_OP_MODE_WFD_CLIENT			"WFD CLIENT"
+    IDS_OP_MODE_MANUFACTURING		"MANOFACTURING"
+    IDS_OP_MODE_NETWORK_MONITOR	    "NETWORK MONITOR"
+
+
+/*
+ 
+ -------------------------------------------IEE 802.2 LLC Typy Logical Link Control--------------------------------------------------------------------
+
+*/
+
+
+IDS_LLC_1						"Null LSAP"
+IDS_LLC_2						"Individual LLC Sublayer Mgt"
+IDS_LLC_3						"SNA Path Control (individual)"
+IDS_LLC_4						"Reserved for DoD IP"
+IDS_LLC_5						"ProWay-LAN"
+IDS_LLC_6						"Texas Instruments"
+IDS_LLC_7						"IEEE 802.1 Bridge Spanning Tree Protocol"
+IDS_LLC_8						"EIA-RS 511"
+IDS_LLC_9						"ISI IP"
+IDS_LLC_10						"ISO 8208 (X.25 over IEEE 802.2 Type LLC)"
+IDS_LLC_11						"Xerox Network Systems (XNS)"
+IDS_LLC_12						"BACnet/Ethernet"
+IDS_LLC_13						"Nestar"
+IDS_LLC_14						"ProWay-LAN (IEC 955)"
+IDS_LLC_15						"ARPANET Address Resolution Protocol (ARP)"
+IDS_LLC_16						"RDE (route determination entity)"
+IDS_LLC_17						"SNAP Extension Used"
+IDS_LLC_18						"Banyan VINES"
+IDS_LLC_19						"Novell NetWare"
+IDS_LLC_20						"IBM NetBIOS"
+IDS_LLC_21						"IBM LAN Management (individual)"
+IDS_LLC_22						"IBM Remote Program Load (RPL)"
+IDS_LLC_23						"Ungermann-Bass"
+IDS_LLC_24						"OSI Connectionless-mode Network Service"
+
+
+END
+
+
+
+/*
+       
+       -------------------------------------------Dialog wyboru karty sieciowej protoko³u--------------------------------------------------------------------
+
+*/
+
+
+
+ID_DIALOG_NETWORK_CARDS DIALOG 50 50 410 210
+
+    STYLE WS_CHILD | WS_POPUP 
+    EXSTYLE WS_EX_APPWINDOW 
+    CLASS "NetAdapters"
+
+BEGIN
+
+    CONTROL, "", IDC_LISTVIEW_1,"SysListView32", LVS_REPORT  | LVS_SINGLESEL | LVS_NOCOLUMNHEADER | LVS_SHOWSELALWAYS | WS_HSCROLL | WS_HSCROLL, 7, 17, 265, 85, LVS_EX_FULLROWSELECT
+    PUSHBUTTON, "OK", IDC_BUTTON_1, 85, 108, 41, 16, BS_PUSHBUTTON | BS_FLAT | BS_BITMAP | WS_VISIBLE | WS_CHILD
+      
+    PUSHBUTTON, "ANULUJ", IDC_BUTTON_2, 145, 108, 41, 16, BS_PUSHBUTTON | BS_BITMAP | WS_VISIBLE | WS_CHILD 
+END
+
+
+
+/*
+        -------------------------------------------Dialog informacji o atrybutach karcie sieciowej--------------------------------------------------------------------
+
+*/
+
+
+ID_DIALOG_NETWORK_CARDS_INFO DIALOG 50 50 410 210
+
+STYLE WS_CHILD | WS_POPUP
+EXSTYLE WS_EX_APPWINDOW
+CLASS "NetAdaptersInfo"
+
+BEGIN
+
+CONTROL, "", IDC_LISTVIEW_1, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_NOCOLUMNHEADER | LVS_SHOWSELALWAYS | WS_HSCROLL | WS_HSCROLL, 7, 17, 265, 85, LVS_EX_FULLROWSELECT
+PUSHBUTTON, "OK", IDC_BUTTON_1, 115, 108, 41, 16, BS_PUSHBUTTON | BS_BITMAP | WS_VISIBLE | WS_CHILD | WS_POPUP
+END
+
+
+
+/*
+        -------------------------------------------Dialog ustawienia trybu pracy karty sieciowej--------------------------------------------------------------------
+
+*/
+
+
+ID_DIALOG_ADAPTER_MODE DIALOG 50 50 410 210
+
+STYLE WS_CHILD | WS_POPUP
+EXSTYLE WS_EX_APPWINDOW
+CLASS "NetAdaptersMode"
+
+BEGIN
+
+CONTROL, "", IDC_COMBOBOX_5, WC_COMBOBOX, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_HSCROLL | WS_VSCROLL, 57, 30, 170, 80,
+PUSHBUTTON, "ZATWIERDZ", IDC_BUTTON_ZATW, 90, 95, 41, 16, BS_PUSHBUTTON | BS_BITMAP | WS_VISIBLE | WS_CHILD | WS_POPUP
+PUSHBUTTON, "ANULUJ", IDC_BUTTON_ANULUJ, 150, 95, 41, 16, BS_PUSHBUTTON | BS_BITMAP | WS_VISIBLE | WS_CHILD | WS_POPUP
+END
+
+
+/*
+        -------------------------------------------Dialog wyboru miniportu--------------------------------------------------------------------
+
+*/
+
+
+ID_DIALOG_MINIPORT DIALOG 50 50 410 210
+
+STYLE WS_CHILD | WS_POPUP
+EXSTYLE WS_EX_APPWINDOW
+CLASS "NetMiniport"
+
+BEGIN
+
+CONTROL, "", IDC_LISTVIEW_1, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_NOCOLUMNHEADER | LVS_SHOWSELALWAYS | WS_HSCROLL | WS_HSCROLL, 7, 17, 265, 85, LVS_EX_FULLROWSELECT
+PUSHBUTTON, "OK", IDC_BUTTON_1, 85, 108, 41, 16, BS_PUSHBUTTON | BS_BITMAP | WS_VISIBLE | WS_CHILD | WS_POPUP
+PUSHBUTTON, "ANULUJ", IDC_BUTTON_2, 145, 108, 41, 16, BS_PUSHBUTTON | BS_BITMAP | WS_VISIBLE | WS_CHILD | WS_POPUP
+END
+
+
+/*
+        -------------------------------------------Dialog informacji o atrybutacj miniportu--------------------------------------------------------------------
+
+*/
+
+
+ID_DIALOG_MINIPORT_INFO DIALOG 50 50 410 210
+
+STYLE WS_CHILD | WS_POPUP
+EXSTYLE WS_EX_APPWINDOW
+CLASS "NetMiniportInfo"
+
+BEGIN
+
+CONTROL, "", IDC_LISTVIEW_1, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_NOCOLUMNHEADER | LVS_SHOWSELALWAYS | WS_HSCROLL | WS_HSCROLL, 7, 17, 265, 85, LVS_EX_FULLROWSELECT
+PUSHBUTTON, "OK", IDC_BUTTON_1, 115, 108, 41, 16, BS_PUSHBUTTON | BS_BITMAP | WS_VISIBLE | WS_CHILD | WS_POPUP
+END
+
+
+
+/*
+        -------------------------------------------Dialog ustawieñ miniportów do wysy³ania lub odbierania pakietów___---------------------------------------
+
+*/
+
+
+
+ID_DIALOG_MINIPORT_SETTINGS DIALOG 50 50 410 210
+
+STYLE WS_CHILD | WS_POPUP
+EXSTYLE WS_EX_APPWINDOW
+CLASS "NetMiniportSettings"
+
+BEGIN
+
+CONTROL, "", IDC_LISTVIEW_1, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_NOCOLUMNHEADER | LVS_SHOWSELALWAYS | WS_HSCROLL | WS_HSCROLL, 7, 17, 265, 85, LVS_EX_FULLROWSELECT
+PUSHBUTTON, "OK", IDC_BUTTON_1, 35, 108, 41, 16, BS_PUSHBUTTON | BS_BITMAP | WS_VISIBLE | WS_CHILD | WS_POPUP
+PUSHBUTTON, "ANULUJ", IDC_BUTTON_2, 95, 108, 41, 16, BS_PUSHBUTTON | BS_BITMAP | WS_VISIBLE | WS_CHILD | WS_POPUP
+END
+
+
+/*
+        -------------------------------------------Dialog filtrowania pakietóew--------------------------------------------------------------------
+
+*/
+
+
+ID_DIALOG_PROT_FILTER DIALOG 50 50 560 210
+
+STYLE WS_CHILD | WS_POPUP
+EXSTYLE WS_EX_APPWINDOW
+CLASS "PacketFilterSettings"
+
+BEGIN
+CONTROL, "", IDC_COMBOBOX_1, WC_COMBOBOX, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_HSCROLL | WS_VSCROLL, 62, 18, 70, 110,
+CONTROL, "", IDC_COMBOBOX_2, WC_COMBOBOX, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_HSCROLL | WS_VSCROLL, 200, 18, 90, 78,
+CONTROL, "", IDC_COMBOBOX_3, WC_COMBOBOX, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_HSCROLL | WS_VSCROLL, 62, 58, 70, 110,
+CONTROL, "", IDC_COMBOBOX_4, WC_COMBOBOX, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_HSCROLL | WS_VSCROLL, 62, 78, 70, 110,
+CONTROL, "", IDC_IP_1, WC_IPADDRESS, 0, 62, 38, 70, 10,
+CONTROL, "", IDC_IP_2, WC_IPADDRESS, 0, 200, 38, 70, 10,
+CONTROL, "", IDC_MAC_1, WC_EDIT, ES_LOWERCASE | ES_LEFT, 200, 58, 70, 10,
+CONTROL, "", IDC_SRC_PORT, WC_EDIT, ES_NUMBER | ES_LEFT, 200, 78, 25, 10,
+CONTROL, "", IDC_DST_PORT, WC_EDIT, ES_NUMBER | ES_LEFT, 290, 78, 25, 10,
+
+PUSHBUTTON, "OK", IDC_BUTTON_1, 85, 108, 41, 16, BS_PUSHBUTTON | BS_BITMAP | WS_VISIBLE | WS_CHILD | WS_POPUP
+PUSHBUTTON, "ANULUJ", IDC_BUTTON_2, 145, 108, 41, 16, BS_PUSHBUTTON | BS_BITMAP | WS_VISIBLE | WS_CHILD | WS_POPUP
+
+END
