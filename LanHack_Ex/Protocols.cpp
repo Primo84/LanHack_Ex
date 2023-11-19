@@ -186,11 +186,9 @@ int MakeAVTP_ControlHead(PVOID Frame, AVTP_ControlHead* AVTP_CH)
 {
 	unsigned long W;
 
-//	W = *((unsigned int*)Frame);
+	if (Frame == NULL || AVTP_CH == NULL) return 1;
 
 	MakeLONGNumber(Frame, &W);
-
-	//RevertBits((PVOID)&W, 32);
 
 	AVTP_CH->CD = W >> 31;
 
@@ -282,6 +280,87 @@ int ConvertMAAPControlHeadertoBuffer(MAAP_Prot* avtp, PVOID Buffer)
 		j--;
 
 		((unsigned char*)Buffer)[i] = ((unsigned char*)&Val)[j];
+	}
+
+	return 0;
+}
+
+int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
+{
+	unsigned long W;
+	unsigned short S;
+
+	if (Frame == NULL || AVTP_SH == NULL) return 1;
+
+	memset(AVTP_SH, 0, sizeof(AVTP_StreamHead));
+
+	MakeLONGNumber(Frame, &W);
+
+	AVTP_SH->CD = W >> 31;
+
+	AVTP_SH->SubType = (W & 0x7F000000) >> 24;
+
+	AVTP_SH->SV = (W & 0x800000) >> 23;
+
+	AVTP_SH->Version = (W & 0x700000) >> 20;
+
+	AVTP_SH->mr = (W & 0x80000) >> 19;
+
+	AVTP_SH->r = (W & 0x40000) >> 18;
+
+	AVTP_SH->gv = (W & 0x20000) >> 17;
+
+	AVTP_SH->tv = (W & 0x10000) >> 16;
+
+	memcpy(AVTP_SH->StreamID, &(((unsigned char*)Frame)[4]), 8);
+
+	memcpy(AVTP_SH->AVTP_TimeStamp, &(((unsigned char*)Frame)[12]), 4);
+
+	memcpy(AVTP_SH->GetWay_Info, &(((unsigned char*)Frame)[16]), 4);
+
+	if (AVTP_SH->SubType == 0)
+	{
+		memcpy(AVTP_SH->Packet_H.StreamDataSize, &(((unsigned char*)Frame)[20]), 2);
+		
+		MakeShortNumber(&(((unsigned char*)Frame)[22]), &S);
+
+		AVTP_SH->Packet_H.Tag = (S & 0xC000) >> 14;
+
+		AVTP_SH->Packet_H.Channel = (S & 0x3F00) >> 8;
+
+		AVTP_SH->Packet_H.TCode = (S & 0xF0) >> 4;
+
+		AVTP_SH->Packet_H.SY = (S & 0x0F);
+
+		MakeLONGNumber(&(((unsigned char*)Frame)[24]), &W);
+
+		AVTP_SH->CIP_H.Prefiks1 = (W & 0xC0000000) >> 30;
+
+		AVTP_SH->CIP_H.SID = (W & 0x3F000000) >> 24;
+
+		AVTP_SH->CIP_H.DBS = (W & 0xFF0000) >> 16;
+
+		AVTP_SH->CIP_H.FN = (W & 0xC000) >> 14;
+
+		AVTP_SH->CIP_H.QPC = (W & 0x3800) >> 11;
+
+		AVTP_SH->CIP_H.SPH = (W & 0x400) >> 10;
+
+		AVTP_SH->CIP_H.Rsv = (W & 0x300) >> 8;
+		
+		AVTP_SH->CIP_H.DBC = (W & 0xFF);
+
+		MakeLONGNumber(&(((unsigned char*)Frame)[28]), &W);
+
+		AVTP_SH->CIP_H.Prefiks2 = (W & 0xC0000000) >> 30;
+
+		AVTP_SH->CIP_H.FMT = (W & 0x3F000000) >> 24;
+
+		AVTP_SH->CIP_H.FDF = (W & 0xFF0000) >> 16;
+
+		AVTP_SH->CIP_H.SYT = (W & 0xFFFF);
+
+		AVTP_SH->Data = &(((unsigned char*)Frame)[32]);
 	}
 
 	return 0;

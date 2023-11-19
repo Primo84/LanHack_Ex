@@ -397,48 +397,49 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	memset(Text, 0, 5000);
 
-	if (((((unsigned char*)Frame)[0]) >> 7 ) == 1) // AVTP Control Packet Header
+	if (DataSize >= 12)
 	{
-		if (DataSize >= 12)
+		MakeAVTP_ControlHead(Frame, &AVTP_CH);
+
+		switch (AVTP_CH.SubType)
 		{
-			MakeAVTP_ControlHead(Frame, &AVTP_CH);
-
-			sprintf(Text, "----AVTP Control Packet Header----\n\n");
-
-			switch (AVTP_CH.SubType)
-			{
 			case 0x00:
 			{
-				sprintf(&Text[strlen(Text)], " SybType : IEC 61883/IIDC over AVTP");
+				sprintf(&Text[strlen(Text)], " SybType : IEC 61883/IIDC over AVTP\n\n");
 
 				break;
 			}
 			case 0x01:
 			{
-				sprintf(&Text[strlen(Text)], "SubType : MMA payload over AVTP");
+				sprintf(&Text[strlen(Text)], "SubType : MMA payload over AVTP\n\n");
 
 				break;
 			}
 			case 0x7E:
 			{
-				sprintf(&Text[strlen(Text)], "SubType : MAAP (MAC Address Allocation Protocol)");
+				sprintf(&Text[strlen(Text)], "SubType : MAAP (MAC Address Allocation Protocol)\n\n");
 
 				break;
 			}
 			case 0x7F:
 			{
-				sprintf(&Text[strlen(Text)], "SubType : Experimental");
+				sprintf(&Text[strlen(Text)], "SubType : Experimental\n\n");
 
 				break;
 			}
 			default:
 			{
-				sprintf(&Text[strlen(Text)], "SubType : Reserved for future protocols");
+				sprintf(&Text[strlen(Text)], "SubType : Reserved for future protocols\n\n");
 
 				break;
 			}
 
-			}
+		}
+
+		if (((((unsigned char*)Frame)[0]) >> 7) == 1) // AVTP Control Packet Header
+		{
+
+			sprintf(Text, "----AVTP Control Packet Header----\n\n");
 
 			sprintf(&Text[strlen(Text)], "\n\nVersion : %0.2X  Control Data : %0.2X  Status : %0.2X  Payload Size : %d Bytes\n\n", AVTP_CH.Version, AVTP_CH.Control_Data, AVTP_CH.Status, AVTP_CH.ControlDataSize);
 
@@ -452,10 +453,10 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 			}
 			else sprintf(&Text[strlen(Text)], "Stream ID : Valid (SV=0)\n\n");
 
-			if (AVTP_CH.SubType == 0x7E) //MAAP AVTP Protocol (MAC Address Allocation Protocol)
+			if (AVTP_CH.SubType == 0x7E)			//MAAP AVTP Protocol (MAC Address Allocation Protocol)
 			{
 				sprintf(&Text[strlen(Text)], "MAAP Message Type : %s\n\n", Message_Type[AVTP_CH.Control_Data]);
-				
+
 				MAAP = (MAAP_Prot*)&AVTP_CH;
 
 				MakeShortNumber(MAAP->Data->MAAP_V1.RequestedCount, &ReqCount);
@@ -473,12 +474,27 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 				else sprintf(&Text[strlen(Text)], "Unkown MAAP Frame format\n\n");
 
 			}
+
+			pl->write(Text, strlen(Text));
+
 		}
+		else // AVTP Stream Vidoe or Audio Packet  
+		{
+			MakeAVTP_ControlHead(Frame, &AVTP_CH);
 
-		pl->write(Text, strlen(Text));
+			sprintf(Text, "----AVTP Stream Packet Header----\n\n");
 
+			if (AVTP_CH.SubType == 0x00)		//IEC 61883/IIDC over AVTP	
+			{
+				sprintf(Text, "IEC 61883/IIDC over AVTP\n\n");
+			}
+		}
 	}
-
+	else
+	{
+		sprintf(Text, "Audio Video Transport Protocol Header is not recognized.........");
+		pl->write(Text, strlen(Text));
+	}
 	
 	return 0;
 }

@@ -667,21 +667,69 @@ typedef union _AVTPData
 
 }AVTP_Data;
 
-typedef struct MAAP_Protocol  
+typedef struct MAAP_Protocol				//cd=1
 {
 	unsigned char CD : 1;
 	unsigned char SubType : 7;
 	unsigned char SV : 1;
 	unsigned char Version : 3;
-	unsigned char MessageType : 4;				//cd=1
+	unsigned char MessageType : 4;				
 	unsigned char MAAP_Version : 5;
-	unsigned short MAAP_Size : 11;  //Payload Size
+	unsigned short MAAP_Size : 11;			 //Payload Size
 	unsigned char StreamID[8];
-
 	AVTP_Data *Data;
 
 }MAAP_Prot;
 
+typedef struct Packet_61883_Header
+{
+	unsigned char StreamDataSize[2];
+	unsigned char Tag : 2;
+	unsigned char Channel : 6;
+	unsigned char TCode : 4;
+	unsigned char SY : 4;
+//	unsigned char CRC_Header[4];
+
+}Packet_61883_H;
+
+typedef struct CIP_61883_Header
+{
+	unsigned char Prefiks1 : 2;
+	unsigned char SID : 6;
+	unsigned char DBS : 8;
+	unsigned char  FN : 2;
+	unsigned char QPC : 3;
+	unsigned char SPH : 1;
+	unsigned char Rsv : 2;
+	unsigned char DBC : 8;
+	unsigned char Prefiks2 : 2;
+	unsigned char FMT : 6;
+	unsigned char FDF : 8;
+	unsigned short SYT : 16;
+
+}CIP_61883_H;
+
+typedef struct AVTP_Strem_Header			//cd=0
+{
+	unsigned char CD : 1;
+	unsigned char SubType : 7;
+	unsigned char SV : 1;
+	unsigned char Version : 3;
+	unsigned char mr : 1;				//media clock restart
+	unsigned char r : 1;				//reserved
+	unsigned char gv : 1;				//getway field valid
+	unsigned char tv : 1;				//timestamp field valid
+	unsigned char SequenceNumber : 8;
+	unsigned short Reserved : 7;
+	unsigned char TU : 1;				//Timestamp Valid
+	unsigned char StreamID[8];
+	unsigned char AVTP_TimeStamp[4];
+	unsigned char GetWay_Info[4];
+	Packet_61883_H Packet_H;
+	CIP_61883_H CIP_H;
+	unsigned char *Data;
+
+}AVTP_StreamHead;
 
 typedef struct AVTP_Prot
 {
@@ -930,7 +978,9 @@ int MakeAVTP_ControlHead(PVOID Frame, AVTP_ControlHead* AVTP_CH);
 
 int ConvertAVTPControlHeadertoBuffer(AVTP_ControlHead *avtp, PVOID Buffer);				//Write AVTP Header to buffer
 
-int ConvertMAAPControlHeadertoBuffer(MAAP_Prot* avtp, PVOID Buffer);					//Write MAAP Header to buffer				
+int ConvertMAAPControlHeadertoBuffer(MAAP_Prot* avtp, PVOID Buffer);					//Write MAAP Header to buffer		
+
+int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH);
 
 
 
