@@ -696,18 +696,47 @@ typedef struct CIP_61883_Header
 {
 	unsigned char Prefiks1 : 2;
 	unsigned char SID : 6;
-	unsigned char DBS : 8;
+	unsigned char DBS;
 	unsigned char  FN : 2;
 	unsigned char QPC : 3;
 	unsigned char SPH : 1;
 	unsigned char Rsv : 2;
-	unsigned char DBC : 8;
+	unsigned char DBC;
 	unsigned char Prefiks2 : 2;
 	unsigned char FMT : 6;
-	unsigned char FDF : 8;
-	unsigned short SYT : 16;
+	unsigned char FDF;
+	unsigned char SYT[2];
 
 }CIP_61883_H;
+
+typedef struct Audio_Sample_61883_6			//Data Payload Audio Sample for Audio 61883_6 packet format 
+{
+	unsigned char Label;
+	unsigned char Sample[3];
+
+}AudioSample_6;
+
+
+typedef struct Video_Data_61883_8			//Data Video Payload for Vidoe 61883_8 packet format 
+{
+	unsigned char VDSPC;
+	unsigned char sol : 1;
+	unsigned char sav : 1;
+	unsigned short LineNumber : 14;
+	unsigned char R : 2;
+	unsigned char Ver : 2;
+	unsigned char Type : 4;
+	unsigned char *VideoBytes;
+
+}VideoData_8;
+
+typedef union _AV_Data
+{
+	unsigned char* Buffer;
+	AudioSample_6* As;
+	VideoData_8 VD;
+
+}AV_Data;
 
 typedef struct AVTP_Strem_Header			//cd=0
 {
@@ -727,7 +756,16 @@ typedef struct AVTP_Strem_Header			//cd=0
 	unsigned char GetWay_Info[4];
 	Packet_61883_H Packet_H;
 	CIP_61883_H CIP_H;
-	unsigned char *Data;
+	BOOLEAN isData;
+	union Data_
+	{
+		unsigned char *Buffer;
+
+		AudioSample_6 *As;
+
+		VideoData_8 VD;
+
+	}Data;
 
 }AVTP_StreamHead;
 
@@ -982,6 +1020,7 @@ int ConvertMAAPControlHeadertoBuffer(MAAP_Prot* avtp, PVOID Buffer);					//Write
 
 int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH);
 
+int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer);
 
 
 /*

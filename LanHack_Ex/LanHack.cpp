@@ -1099,17 +1099,41 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 	return 0;
 }
 
-typedef struct _EBuf
+typedef struct EBuffer
 {
-	unsigned char Buf[2000];
+	unsigned char Buf[1000];
 
-}EBuf;
+}EBuff;
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_show)
 {
 	WNDCLASSEX MainClass;
 	int i;
 	HBITMAP Background;
+
+	AVTP_StreamHead AVTP_SH;
+	EBuff *EB;
+
+	unsigned char Buffer[52] = { 0x80 /*subtype = 0*/, 0xEB, 0x0F, 0x21,\
+								0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8,\
+								0xA1, 0x23, 0xC4, 0x55,\
+								0xB1, 0xB2, 0XB3, 0xB4,\
+								0x00, 0x10, 0x72, 0xAC,\
+								0x2D, 0x04, 0xBD, 0x12,\
+								0x81, 0x3A, 0x00, 0x54,\
+								0x48, 0x45, 0xAD, 0xD9 };
+
+	unsigned char Buffer1[52];
+
+	for (i = 0; i < 16; i++)
+		Buffer[36 + i] = i;
+
+	
+	MakeAVTP_StreamHead(Buffer, &AVTP_SH);
+
+	EB = (EBuff*)AVTP_SH.Data.VD.VideoBytes;
+	ConvertAVTPStreamHeadToBuffer(&AVTP_SH, Buffer1);
+
 
 	Module_Instance = instance;
 	Icon_Add = false;

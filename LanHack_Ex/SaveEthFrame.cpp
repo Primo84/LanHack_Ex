@@ -448,7 +448,7 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 				MakeShortNumber((unsigned short*)&AVTP_CH.StreamID[6], &Number);
 
 				sprintf(&Text[strlen(Text)], "Strem ID : MAC [%0.2X %0.2X %0.2X %0.2X %0.2X %0.2X] Unique ID [%0.2X(%d)]\n\n", AVTP_CH.StreamID[0], \
-					AVTP_CH.StreamID[1], AVTP_CH.StreamID[2], AVTP_CH.StreamID[3], AVTP_CH.StreamID[4], AVTP_CH.StreamID[5], AVTP_CH.StreamID[6], \
+					AVTP_CH.StreamID[1], AVTP_CH.StreamID[2], AVTP_CH.StreamID[3], AVTP_CH.StreamID[4], AVTP_CH.StreamID[5],\
 					Number, Number);
 			}
 			else sprintf(&Text[strlen(Text)], "Stream ID : Valid (SV=0)\n\n");
