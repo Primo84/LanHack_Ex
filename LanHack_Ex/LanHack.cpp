@@ -1118,7 +1118,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 								0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8,\
 								0xA1, 0x23, 0xC4, 0x55,\
 								0xB1, 0xB2, 0XB3, 0xB4,\
-								0x00, 0x10, 0x72, 0xAC,\
+								0x00, 0x14, 0x72, 0xAC,\
 								0x2D, 0x04, 0xBD, 0x12,\
 								0x81, 0x3A, 0x00, 0x54,\
 								0x48, 0x45, 0xAD, 0xD9 };
@@ -1133,6 +1133,14 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 
 	EB = (EBuff*)AVTP_SH.Data.VD.VideoBytes;
 	ConvertAVTPStreamHeadToBuffer(&AVTP_SH, Buffer1);
+
+	for (i = 0; i < 52; i++)
+	{
+		if (Buffer[i] != Buffer1[i])
+		{
+			Buffer1[i] = Buffer[i];
+		}
+	}
 
 
 	Module_Instance = instance;

@@ -557,7 +557,7 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 				((unsigned char*)Buffer)[i] = ((unsigned char*)&Val)[j];
 			}
 
-			memcpy(&((unsigned char*)Buffer)[36], avtp->Data.VD.VideoBytes, sVal-6);
+			memcpy(&((unsigned char*)Buffer)[36], avtp->Data.VD.VideoBytes, sVal-4);
 		}
 	}
 
