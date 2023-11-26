@@ -1111,15 +1111,17 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 	int i;
 	HBITMAP Background;
 
+/*
+
 	unsigned char MD[6] = { 0xB4, 0x8C, 0x9D, 0x54, 0x8D, 0x75 };
 	unsigned char MZ[6] = { 0x58, 0x11, 0x22, 0x3B, 0x9C, 0x6A };
 	unsigned char EType[2] = { 0x22, 0xF0 };
 
-	unsigned char Buffer[52] = { 0x00 /*subtype = 0 CD=0*/, 0xEB, 0x0F, 0x21,\
+	unsigned char Buffer[52] = { 0x00 /*subtype = 0 CD=0*//*, 0xEB, 0x0F, 0x21, \
 							0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8,\
 							0xA1, 0x23, 0xC4, 0x55,\
 							0xB1, 0xB2, 0xB3, 0xB4,\
-							0x00, 0x1C /*Packet Size == 28(16 + 8 CIP + 4 First Video)*/, 0x72, 0xAC, \
+							0x00, 0x1C /*Packet Size == 28(16 + 8 CIP + 4 First Video)*//*, 0x72, 0xAC, \
 							0x2D, 0x05, 0xBD, 0x12,\
 							0x90, 0x3A, 0x00, 0x54,\
 							0x48, 0x45, 0xAD, 0xD9 }; // First 4 Video Meta Data Bytes
@@ -1158,7 +1160,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 	memcpy(&EH.NetworkData[18], Buffer, 52);
 
 	EH.DataSize = 70;
-
+*/
 /*
 	MakeAVTP_StreamHead(Buffer, &AVTP_SH);
 
@@ -1207,13 +1209,13 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 			Miniport = GetMiniports(&MiniportCount);
 			ShowWindow(WindowHandle,SW_SHOWNORMAL);
 
-
+	/*
 			memcpy(&RecvProt_Buf.Buffer[0], &EH, sizeof(EHeader));
 			RecvProt_Buf.PIndex = 1;
 			RecvProt_Buf.TotalCount = 1;
 
 			SaveTable(&RecvProt_Buf, WindowHandle, Module_Instance);
-
+	*/
 			while (GetMessage(&message, NULL, 0, 0))
 			{
 				TranslateMessage(&message);

@@ -62,7 +62,7 @@ BOOL CheckFilterControl(PacketFilter* PFilter, EHeader* EthernetFrame, FrameCont
 
 BOOL CheckFilterManagement(PacketFilter* PFilter, EHeader* EthernetFrame, FrameControl* FC);
 
-BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, FrameControl FC, unsigned short EType);
+BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short EType);
 
 
 int ClearTable(PacketBuff* PBuff, HWND PacketTable);

@@ -1768,7 +1768,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 				}
 			}
 
-			return CheckFilterIP(PFilter, P, FC, EType);
+			return CheckFilterIP(PFilter, P, EType);
 		}
 		else if (FC.FromDis == 1 && FC.ToDis == 1)				//4 Adresy MAC
 		{
@@ -1788,7 +1788,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 						}
 					}
 
-					return CheckFilterIP(PFilter, P, FC, EType);
+					return CheckFilterIP(PFilter, P, EType);
 				}
 				else												//No Qos Yes HTC
 				{													
@@ -1804,7 +1804,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 						}
 					}
 
-					return CheckFilterIP(PFilter, P, FC, EType);		
+					return CheckFilterIP(PFilter, P, EType);		
 				}
 			}
 			else								//Yes Qos
@@ -1823,7 +1823,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 						}
 					}
 
-					return CheckFilterIP(PFilter, P, FC, EType);		//Yes Qos No HTC
+					return CheckFilterIP(PFilter, P, EType);		//Yes Qos No HTC
 				}
 				else
 				{
@@ -1839,7 +1839,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 						}
 					}
 
-					return CheckFilterIP(PFilter, P, FC, EType);		//Yes Qos Yes HTC
+					return CheckFilterIP(PFilter, P, EType);		//Yes Qos Yes HTC
 				}
 
 			}
@@ -1862,7 +1862,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 						}
 					}
 
-					return CheckFilterIP(PFilter, P, FC, EType);		//No Qos No HTC
+					return CheckFilterIP(PFilter, P, EType);		//No Qos No HTC
 				}
 				else
 				{
@@ -1878,7 +1878,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 						}
 					}
 
-					return CheckFilterIP(PFilter, P, FC, EType);		//No Qos Yes HTC
+					return CheckFilterIP(PFilter, P, EType);		//No Qos Yes HTC
 				}
 			}
 			else								//Yes Qos
@@ -1897,7 +1897,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 						}
 					}
 
-					return CheckFilterIP(PFilter, P, FC, EType);		//Yes Qos No HTC
+					return CheckFilterIP(PFilter, P, EType);		//Yes Qos No HTC
 				}
 				else
 				{
@@ -1913,12 +1913,12 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 						}
 					}
 
-					return CheckFilterIP(PFilter, P, FC, EType);		//Yes Qos Yes HTC
+					return CheckFilterIP(PFilter, P, EType);		//Yes Qos Yes HTC
 				}
 			}
 		}
 	}
-	else if (FC.Type == 1)
+	else if (FC.Type == 3)
 	{
 
 	}
@@ -2006,28 +2006,59 @@ BOOL CheckFilter802_3(PacketFilter* PFilter, EHeader* EthernetFrame)
 	BOOL isEType;
 	LLC_H *LLC;
 	LLC_SNAP *LlcSnap;
+	PVOID P;
 
 
 	EH = (E802_3*)EthernetFrame->NetworkData;
 
+
+	if ((PFilter->FilterMask & IS_MAC) == IS_MAC)
+	{
+		isFilter = FALSE;
+
+		memset(Text_, 0, 50);
+		sprintf_s(Text_, "%0.2x%0.2x%0.2x%0.2x%0.2x%0.2x", EH->MAC_Zrodlowy[0], EH->MAC_Zrodlowy[1], EH->MAC_Zrodlowy[2], EH->MAC_Zrodlowy[3], EH->MAC_Zrodlowy[4], EH->MAC_Zrodlowy[5]);
+
+		if (strcmp(Text_, PFilter->mac) == 0)
+			isFilter = TRUE;
+		else
+		{
+			memset(Text_, 0, 50);
+			sprintf_s(Text_, "%0.2x%0.2x%0.2x%0.2x%0.2x%0.2x", EH->MAC_Docelowy[0], EH->MAC_Docelowy[1], EH->MAC_Docelowy[2], EH->MAC_Docelowy[3], EH->MAC_Docelowy[4], EH->MAC_Docelowy[5]);
+
+			if (strcmp(Text_, PFilter->mac) == 0)
+				isFilter = TRUE;
+
+		}
+		if (!isFilter)
+			return FALSE;
+	}
+
+	P = NULL;
+
 	MakeShortNumber((unsigned short*)EH->Typ, &EType);
 
-	isEType = FALSE;
-
 	if (EType >= 1536)
-		isEType = TRUE;
+	{
+		P = (PVOID)EH->Dane;
+	}
 	else if (EType <= 1500)
 	{
+		EType = 0;
+
 		LLC = (LLC_H*)EH->Dane;
+		P = (PVOID)(((char*)EH->Dane) + sizeof(LLC_H));
 
 		if ((LLC->DSAP == 0xAA && LLC->SSAP == 0xAA) || (LLC->DSAP == 0xAB && LLC->SSAP == 0xAB))
 		{
 			LlcSnap = (LLC_SNAP*)EH->Dane;
 			MakeShortNumber((unsigned short*)LlcSnap->SNAP.EtherType, &EType);
-			isEType = TRUE;
+			P = (PVOID)(((char*)EH->Dane) + sizeof(LLC_SNAP));
 		}
 
 	}
+
+	return CheckFilterIP(PFilter, P, EType);
 
 	if ((PFilter->FilterMask & IS_TYPE) == IS_TYPE)
 	{
@@ -2121,30 +2152,10 @@ BOOL CheckFilter802_3(PacketFilter* PFilter, EHeader* EthernetFrame)
 
 	isFilter = TRUE;
 
-	if ((PFilter->FilterMask & IS_MAC) == IS_MAC)
-	{
-		isFilter = FALSE;
-
-		memset(Text_, 0, 50);
-		sprintf_s(Text_, "%0.2x%0.2x%0.2x%0.2x%0.2x%0.2x", EH->MAC_Zrodlowy[0], EH->MAC_Zrodlowy[1], EH->MAC_Zrodlowy[2], EH->MAC_Zrodlowy[3], EH->MAC_Zrodlowy[4], EH->MAC_Zrodlowy[5]);
-
-		if (strcmp(Text_, PFilter->mac) == 0)
-			isFilter = TRUE;
-		else
-		{
-			memset(Text_, 0, 50);
-			sprintf_s(Text_, "%0.2x%0.2x%0.2x%0.2x%0.2x%0.2x", EH->MAC_Docelowy[0], EH->MAC_Docelowy[1], EH->MAC_Docelowy[2], EH->MAC_Docelowy[3], EH->MAC_Docelowy[4], EH->MAC_Docelowy[5]);
-
-			if (strcmp(Text_, PFilter->mac) == 0)
-				isFilter = TRUE;
-			
-		}
-	}
-
 	return isFilter;
 }
 
-BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, FrameControl FC, unsigned short EType)
+BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short EType)
 {
 	char Text_[50];
 	BOOL isFilter;
