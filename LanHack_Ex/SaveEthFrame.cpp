@@ -350,9 +350,9 @@ int SaveIEE802_1qTagFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	MakeShortNumber((unsigned short*)bt, &EType);
 
-	sprintf(Text, "AVTP Audio Video Protocol...\n\n");
+	sprintf(Text, "------------AVTP Audio Video Protocol------------\n\n");
 
-	sprintf(&Text[strlen(Text)], " Priority : %d  Canonical Format Mac (0-Canonical Format | 1-Non Cannonical Format) : %d, VLAN Identifier : %0.2X\n\n", tci.PCP, tci.DEI, tci.VID);
+	sprintf(&Text[strlen(Text)], " Priority : %d  Canonical Format Mac (0-Canonical Format | 1-Non Cannonical Format) : %d  VLAN Identifier : %0.2X\n\n", tci.PCP, tci.DEI, tci.VID);
 
 	pl->write(Text, strlen(Text));
 
@@ -382,18 +382,28 @@ typedef struct _EB
 int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 {
 	char Text[5000];
-	char* bt;
+	char Text1[500];
+	int licz, rozm, i;
+	char LNumberText[100];
+	unsigned char* bt;
 	AVTP_ControlHead AVTP_CH;
+	AVTP_StreamHead AVTP_SH;
 	MAAP_Prot* MAAP;
-	unsigned short Number;
+	unsigned short Number, StreamSize;
 	char Message_Type[7][25] = { "Reserved\0", "MAAP_PROBE\0", "MAAP_DEFEND\0", "MAAP_ANNOUNCE\0", "MAAP_RELEASE\0", "MAAP_ASSIGN\0", "MAAP_UNASSIGN\0" };
+	char Type61883[50];
 	unsigned short ReqCount, ConflictCount;
-
+	unsigned long LNumb;
 	EB* B;
 
-	B = (EB*)Frame;
+
 
 	if (DataSize <= 0) return 0;
+
+	bt = NULL;
+	rozm = 0;
+
+	B = (EB*)Frame;
 
 	memset(Text, 0, 5000);
 
@@ -439,15 +449,15 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 		if (((((unsigned char*)Frame)[0]) >> 7) == 1) // AVTP Control Packet Header
 		{
 
-			sprintf(Text, "----AVTP Control Packet Header----\n\n");
+			sprintf(Text, "------------AVTP Control Packet Header------------\n\n");
 
-			sprintf(&Text[strlen(Text)], "\n\nVersion : %0.2X  Control Data : %0.2X  Status : %0.2X  Payload Size : %d Bytes\n\n", AVTP_CH.Version, AVTP_CH.Control_Data, AVTP_CH.Status, AVTP_CH.ControlDataSize);
+			sprintf(&Text[strlen(Text)], "\n\nVersion : 0x%0.2X  Control Data : 0x%0.2X  Status : 0x%0.2X  Payload Size : %d Bytes\n\n", AVTP_CH.Version, AVTP_CH.Control_Data, AVTP_CH.Status, AVTP_CH.ControlDataSize);
 
 			if (AVTP_CH.SV)
 			{
 				MakeShortNumber((unsigned short*)&AVTP_CH.StreamID[6], &Number);
 
-				sprintf(&Text[strlen(Text)], "Strem ID : MAC [%0.2X %0.2X %0.2X %0.2X %0.2X %0.2X] Unique ID [%0.2X(%d)]\n\n", AVTP_CH.StreamID[0], \
+				sprintf(&Text[strlen(Text)], "Strem ID : MAC [%0.2X %0.2X %0.2X %0.2X %0.2X %0.2X] Unique ID [%0x0.2X(%d)]\n\n", AVTP_CH.StreamID[0], \
 					AVTP_CH.StreamID[1], AVTP_CH.StreamID[2], AVTP_CH.StreamID[3], AVTP_CH.StreamID[4], AVTP_CH.StreamID[5],\
 					Number, Number);
 			}
@@ -480,13 +490,160 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 		}
 		else // AVTP Stream Vidoe or Audio Packet  
 		{
-			MakeAVTP_ControlHead(Frame, &AVTP_CH);
+			MakeAVTP_StreamHead(Frame, &AVTP_SH);
 
-			sprintf(Text, "----AVTP Stream Packet Header----\n\n");
+			sprintf(Text, "------------AVTP Stream Packet Header------------\n\n");
 
 			if (AVTP_CH.SubType == 0x00)		//IEC 61883/IIDC over AVTP	
 			{
-				sprintf(Text, "IEC 61883/IIDC over AVTP\n\n");
+				sprintf(&Text[strlen(Text)], "Version : 0x%0.2X  Media Clock Restart(mr) : %d  Reserved : %d  Gateway_info field valid : %d  Timestamp valid : %d\n\n",AVTP_SH.Version,\
+												AVTP_SH.mr, AVTP_SH.Reserved, AVTP_SH.gv, AVTP_SH.tv);
+				sprintf(&Text[strlen(Text)], "Sequence number : %d(0x%0.2X)   Timestamp uncertainty :  %d\n\n", AVTP_SH.SequenceNumber, AVTP_SH.SequenceNumber, AVTP_SH.TU);
+
+				if (AVTP_SH.SV == 1)
+				{
+					MakeShortNumber((unsigned short*)&AVTP_SH.StreamID[6], &Number);
+
+					sprintf(&Text[strlen(Text)], "Strem ID : MAC [%0.2X %0.2X %0.2X %0.2X %0.2X %0.2X] Unique ID : 0x%0.2X(%d)\n\n", AVTP_SH.StreamID[0], \
+						AVTP_SH.StreamID[1], AVTP_SH.StreamID[2], AVTP_SH.StreamID[3], AVTP_SH.StreamID[4], AVTP_SH.StreamID[5], \
+						Number, Number);
+				}
+				else sprintf(&Text[strlen(Text)], "Stream ID : Valid (SV=0)\n\n");
+
+				if (AVTP_SH.tv == 1)
+				{
+					MakeLONGNumber(AVTP_SH.AVTP_TimeStamp, &LNumb);
+
+					memset(LNumberText, 0, 100);
+					_ultoa(LNumb, LNumberText, 10);
+
+					sprintf(&Text[strlen(Text)], "Time Stamp : %s  ", LNumberText);
+				}
+				else sprintf(&Text[strlen(Text)], "Time Stamp : Valid (tv=0)  ");
+
+				if (AVTP_SH.gv == 1)
+				{
+					MakeLONGNumber(AVTP_SH.GetWay_Info, &LNumb);
+
+					memset(LNumberText, 0, 100);
+					_ultoa(LNumb, LNumberText, 10);
+
+					sprintf(&Text[strlen(Text)], "GetWay Info : [%0.2X %0.2X %0.2X %0.2X] (%s)\n\n", AVTP_SH.GetWay_Info[0], AVTP_SH.GetWay_Info[1],\
+																								AVTP_SH.GetWay_Info[2], AVTP_SH.GetWay_Info[3], LNumberText);
+				}
+				else sprintf(&Text[strlen(Text)], "Getway Info : Valid (gv=0)\n\n");
+
+				MakeShortNumber(AVTP_SH.Packet_H.StreamDataSize, &StreamSize);
+				
+				sprintf(&Text[strlen(Text)], "Stream Data Size : %d     Tag : %d     Channel : %d     TCode: 0x%0.2X     SY : %d\n\n", StreamSize, AVTP_SH.Packet_H.Tag, AVTP_SH.Packet_H.Channel,\
+													AVTP_SH.Packet_H.TCode, AVTP_SH.Packet_H.SY);
+
+				sprintf(&Text[strlen(Text)], "SID : %d     DBS : %d     FN : %d     QPC : %d     SPH : %d     Rsv : %d\n\n", AVTP_SH.CIP_H.SID, AVTP_SH.CIP_H.DBS, AVTP_SH.CIP_H.FN,\
+														AVTP_SH.CIP_H.QPC, AVTP_SH.CIP_H.SPH, AVTP_SH.CIP_H.Rsv);
+				
+
+				memset(Type61883, 0, 50);
+				
+				if (AVTP_SH.CIP_H.FMT == 0x1)
+				{
+					strcpy(Type61883, "61883-8 Digital Video Data");
+
+					MakeShortNumber(AVTP_SH.CIP_H.SYT, &Number);
+					memset(LNumberText, 0, 100);
+					_ultoa(Number, LNumberText, 10);
+
+					sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d     SYT : 0x%0.2X(%s)\n\n", AVTP_SH.CIP_H.DBC, Type61883, AVTP_SH.CIP_H.FDF, \
+						Number, LNumberText);
+
+					if (AVTP_SH.isData == 1)
+					{
+						sprintf(&Text[strlen(Text)], "VDSPC : 0x%0.2x(%d)     Sol : %d     Sav : %d     ", AVTP_SH.Data.VD.VDSPC, AVTP_SH.Data.VD.VDSPC, AVTP_SH.Data.VD.sol, AVTP_SH.Data.VD.sav);
+
+						Number = (unsigned short)AVTP_SH.Data.VD.LineNumber;
+
+						sprintf(&Text[strlen(Text)], "Line Number : 0x%0.2x(%d)\n\nR : %d     Ver : %d     Type : %d\n\n", Number, Number, AVTP_SH.Data.VD.R, AVTP_SH.Data.VD.Ver, AVTP_SH.Data.VD.Type);
+
+						rozm = StreamSize - 12;
+						bt = (unsigned char*)AVTP_SH.Data.VD.VideoBytes;
+					}
+
+				}
+				else if (AVTP_SH.CIP_H.FMT == 0x10)
+				{
+					strcpy(Type61883, "61883-6 Audio Packet");
+
+					MakeShortNumber(AVTP_SH.CIP_H.SYT, &Number);
+					memset(LNumberText, 0, 100);
+					_ultoa(Number, LNumberText, 10);
+
+					sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d     SYT : 0x%0.2X(%s)\n\n", AVTP_SH.CIP_H.DBC, Type61883, AVTP_SH.CIP_H.FDF, \
+						Number, LNumberText);
+
+					if (AVTP_SH.isData == 1)
+					{
+						rozm = StreamSize - 8;
+						bt = (unsigned char*)AVTP_SH.Data.As;
+					}
+
+				}
+
+
+			}
+
+			pl->write(Text, strlen(Text));
+
+			if (bt != NULL && rozm > 0)
+			{
+				memset(Text1, 0, 500);
+				strcpy(Text1, "**********DANE(Video\\Audio Stream)**********\n\n");
+				pl->write(Text1, strlen(Text1));
+
+				licz = 0;
+
+				memset(Text1, 0, 500);
+				memset(Text, 0, 5000);
+
+				for (i = 0; i < rozm; i++)
+				{
+
+					if (bt[i] <= 32 || bt[i] > 127)
+				//	if ((bt[i] >= 0 && bt[i] <= 32) || (bt[i]==0xAD) || (bt[i]==0xA0))
+						sprintf(&Text[strlen(Text)], ".");
+					else
+						sprintf(&Text[strlen(Text)], "%c", bt[i]);
+
+					sprintf(&Text1[strlen(Text1)], "%0.2X ", bt[i]);
+
+					licz++;
+
+					if (licz == 20)
+					{
+						sprintf(&Text1[strlen(Text1)], "\n");
+						sprintf(&Text[strlen(Text)], "                    ");
+
+						pl->write(Text, strlen(Text));
+
+						pl->write(Text1, strlen(Text1));
+
+						memset(Text1, 0, 500);
+						memset(Text, 0, 5000);
+
+						licz = 0;
+					}
+				}
+
+				if (licz > 0)
+				{
+					sprintf(&Text1[strlen(Text1)], "\n");
+					sprintf(&Text[strlen(Text)], "                    ");
+
+					for (i = licz; i < 20; i++)
+						sprintf(&Text[strlen(Text)], " ");
+
+					pl->write(Text, strlen(Text));
+
+					pl->write(Text1, strlen(Text1));
+				}
 			}
 		}
 	}

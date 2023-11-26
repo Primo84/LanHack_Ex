@@ -101,8 +101,8 @@ int SaveTCP(PVOID Frame, fstream* pl, unsigned short TcpSize)
 
 	for (i = 0; i < rozm; i++)
 	{
-
-		if (bt[i] >= 0 && bt[i] <= 32)
+		if(bt[i]<=32 || bt[i]>127)
+	//	if ((bt[i] >= 0 && bt[i] <= 32) || (bt[i]==0xAD) || (bt[i]==0xA0))
 			sprintf(&Text[strlen(Text)], ".");
 		else
 			sprintf(&Text[strlen(Text)], "%c", bt[i]);
@@ -114,7 +114,7 @@ int SaveTCP(PVOID Frame, fstream* pl, unsigned short TcpSize)
 		if (licz == 20)
 		{
 			sprintf(&Text1[strlen(Text1)], "\n");
-			sprintf(&Text[strlen(Text)], "			");
+			sprintf(&Text[strlen(Text)], "                    ");
 
 			pl->write(Text, strlen(Text));
 
@@ -127,6 +127,18 @@ int SaveTCP(PVOID Frame, fstream* pl, unsigned short TcpSize)
 		}
 	}
 
+	if (licz > 0)
+	{
+		sprintf(&Text1[strlen(Text1)], "\n");
+		sprintf(&Text[strlen(Text)], "                    ");
+
+		for (i = licz; i < 20; i++)
+			sprintf(&Text[strlen(Text)], " ");
+
+		pl->write(Text, strlen(Text));
+
+		pl->write(Text1, strlen(Text1));
+	}
 
 	return 0;
 }
@@ -152,7 +164,7 @@ int SaveUDP(PVOID Frame, fstream* pl, unsigned short UdpSize)
 	memset(Text, 0, 500);
 
 
-	sprintf_s(Text, "**********RAMKA : UDP**********\n\nPORT RÓD£OWY : %d  PORT DOCELOWY : %d\n\n", port_zr, port_doc);
+	sprintf_s(Text, "**********RAMKA : UDP**********\n\nPORT RÓD£OWY : %d  PORT DOCELOWY : %d\n\n**********DANE**********\n\n", port_zr, port_doc);
 
 	pl->write(Text, strlen(Text));
 
@@ -176,7 +188,8 @@ int SaveUDP(PVOID Frame, fstream* pl, unsigned short UdpSize)
 	for (i = 0; i < rozm; i++)
 	{
 
-		if (bt[i] >= 0 && bt[i] <= 32)
+		if (bt[i] <= 32 || bt[i] > 127)
+	//	if ((bt[i] >= 0 && bt[i] <= 32) || (bt[i]==0xAD) || (bt[i]==0xA0))
 			sprintf(&Text[strlen(Text)], ".");
 		else
 			sprintf(&Text[strlen(Text)], "%c", bt[i]);
@@ -199,6 +212,19 @@ int SaveUDP(PVOID Frame, fstream* pl, unsigned short UdpSize)
 
 			licz = 0;
 		}
+	}
+
+	if (licz > 0)
+	{
+		sprintf(&Text1[strlen(Text1)], "\n");
+		sprintf(&Text[strlen(Text)], "                    ");
+
+		for (i = licz; i < 20; i++)
+			sprintf(&Text[strlen(Text)], " ");
+
+		pl->write(Text, strlen(Text));
+
+		pl->write(Text1, strlen(Text1));
 	}
 
 	return 0;
