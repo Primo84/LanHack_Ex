@@ -16,6 +16,8 @@ PacketBuff RecvProt_Buf;
 
 HMODULE HM;
 
+EHeader EH;
+
 
 LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 {
@@ -1111,17 +1113,17 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 	int i;
 	HBITMAP Background;
 
-/*
+
 
 	unsigned char MD[6] = { 0xB4, 0x8C, 0x9D, 0x54, 0x8D, 0x75 };
 	unsigned char MZ[6] = { 0x58, 0x11, 0x22, 0x3B, 0x9C, 0x6A };
 	unsigned char EType[2] = { 0x22, 0xF0 };
 
-	unsigned char Buffer[52] = { 0x00 /*subtype = 0 CD=0*//*, 0xEB, 0x0F, 0x21, \
+	unsigned char Buffer[52] = { 0x00 /*subtype = 0 CD=0*/, 0xEB, 0x0F, 0x21, \
 							0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8,\
 							0xA1, 0x23, 0xC4, 0x55,\
 							0xB1, 0xB2, 0xB3, 0xB4,\
-							0x00, 0x1C /*Packet Size == 28(16 + 8 CIP + 4 First Video)*//*, 0x72, 0xAC, \
+							0x00, 0x1C /*Packet Size == 28(16 + 8 CIP + 4 First Video)*/, 0x72, 0xAC, \
 							0x2D, 0x05, 0xBD, 0x12,\
 							0x90, 0x3A, 0x00, 0x54,\
 							0x48, 0x45, 0xAD, 0xD9 }; // First 4 Video Meta Data Bytes
@@ -1133,7 +1135,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 	EHead_802_3 E802_3;
 	TF_802_1g TF;
 	TCI tci;
-	EHeader EH;
+	//EHeader EH;
 
 
 	for (i = 0; i < 16; i++)
@@ -1159,8 +1161,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 	memcpy(&EH.NetworkData[16], EType, 2);
 	memcpy(&EH.NetworkData[18], Buffer, 52);
 
-	EH.DataSize = 70;
-*/
+	EH.DataSize = 74;
+
 /*
 	MakeAVTP_StreamHead(Buffer, &AVTP_SH);
 
@@ -1184,7 +1186,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 	MainClass.cbSize = sizeof(WNDCLASSEX);
 	MainClass.lpszClassName = L"HACKLAN";
 	MainClass.hInstance = instance;
-	MainClass.style = CS_VREDRAW | CS_HREDRAW | CS_OWNDC | CS_SAVEBITS;
+	MainClass.style = CS_VREDRAW | CS_HREDRAW | CS_OWNDC | CS_SAVEBITS | CS_DBLCLKS;
 	MainClass.lpfnWndProc = (WNDPROC)&WndProc;
 	MainClass.hCursor =LoadCursor(NULL,IDC_ARROW);
 	MainClass.hbrBackground = CreatePatternBrush(LoadBitmapA(instance, MAKEINTRESOURCEA(IDB_BACK)));
@@ -1208,6 +1210,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 			
 			Miniport = GetMiniports(&MiniportCount);
 			ShowWindow(WindowHandle,SW_SHOWNORMAL);
+
 
 	/*
 			memcpy(&RecvProt_Buf.Buffer[0], &EH, sizeof(EHeader));

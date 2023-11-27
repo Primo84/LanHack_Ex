@@ -1675,6 +1675,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 					if (EType <= 1500)
 					{
 						LLC = (LLC_H*)EH45->NetworkData;
+						EType = 0;
 
 						if ((LLC->DSAP == 0xAA && LLC->DSAP == 0xAA) || (LLC->DSAP == 0xAB && LLC->DSAP == 0xAB))
 						{
@@ -1699,6 +1700,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 					if (EType <= 1500)
 					{
 						LLC = (LLC_H*)EH47->NetworkData;
+						EType = 0;
 
 						if ((LLC->DSAP == 0xAA && LLC->DSAP == 0xAA) || (LLC->DSAP == 0xAB && LLC->DSAP == 0xAB))
 						{
@@ -1727,6 +1729,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 					if (EType <= 1500)
 					{
 						LLC = (LLC_H*)EH46->NetworkData;
+						EType = 0;
 
 						if ((LLC->DSAP == 0xAA && LLC->DSAP == 0xAA) || (LLC->DSAP == 0xAB && LLC->DSAP == 0xAB))
 						{
@@ -1751,6 +1754,7 @@ BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 					if (EType <= 1500)
 					{
 						LLC = (LLC_H*)EH48->NetworkData;
+						EType = 0;
 
 						if ((LLC->DSAP == 0xAA && LLC->DSAP == 0xAA) || (LLC->DSAP == 0xAB && LLC->DSAP == 0xAB))
 						{
@@ -2075,25 +2079,59 @@ BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short ETyp
 	TcpProt *TcpFrame;
 	UDPProt *UDPFrame;
 	IHL_V IHLV;
-	PVOID P;
+	PVOID P,NetwData;
 	unsigned short port;
+	unsigned char* bt;
+	unsigned short ET;
+
+	NetwData = NetworkData;
 
 	if ((PFilter->FilterMask & IS_ETYPE) == IS_ETYPE)
 	{
 		if (EType == 0)
 			return FALSE;
+	
+		if (strcmp(PFilter->EType, "AVTP") == 0)
+		{
+			if (EType == 0x8100 || EType == 0x88A8 || EType == 0x22F0)
+			{
+				if (EType == 0x8100 || EType == 0x88A8)
+				{
+					MakeShortNumber((PVOID)(((unsigned char*)NetworkData) + 2), &ET);
 
-		memset(Text_, 0, 50);
-		LoadStringA(ModuleInstance, EType, Text_, 50);
+					if (ET != 0x22F0)
+					{
+						if (ET == 0x8100 || ET == 0x88A8)
+						{
+							MakeShortNumber((PVOID)(((unsigned char*)NetworkData) + 6), &ET);
 
-		if (strcmp(Text_, PFilter->EType) != 0)
-			return FALSE;
+							if (ET != 0x22F0)
+								return FALSE;
+
+							NetwData = (PVOID)(((unsigned char*)NetworkData) + 8);
+						}
+					}
+					else NetwData = (PVOID)(((unsigned char*)NetworkData) + 4);
+				}
+			}
+			else 
+				return FALSE;
+		}
+		else
+		{
+			memset(Text_, 0, 50);
+			LoadStringA(ModuleInstance, EType, Text_, 50);
+
+			if (strcmp(Text_, PFilter->EType) != 0)
+				return FALSE;
+		}
+		
 	}
 
 
 	if ((PFilter->FilterMask & IS_IPTYPE) == IS_IPTYPE)
 	{
-		if (NetworkData == NULL)
+		if (NetwData == NULL)
 			return false;
 
 		if (EType != 0x800 && EType != 0x86DD)
@@ -2101,12 +2139,12 @@ BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short ETyp
 
 		if (EType == 0x800)
 		{
-			IPFrame = (IpProt*)NetworkData;
+			IPFrame = (IpProt*)NetwData;
 			TypPakietu = IPFrame->TypPakietu;
 		}
 		else if (EType == 0x86DD)
 		{
-			IPV6Frame = (IPV6*)NetworkData;
+			IPV6Frame = (IPV6*)NetwData;
 			TypPakietu = IPV6Frame->NastNaglowek;
 		}
 
@@ -2130,17 +2168,17 @@ BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short ETyp
 
 	if ((PFilter->FilterMask & IS_IPFROM) == IS_IPFROM)
 	{
-		if (NetworkData == NULL || EType==0)
+		if (NetwData == NULL || EType==0)
 			return FALSE;
 
 		if (EType == 0x800)
 		{
-			IPFrame = (IpProt*)NetworkData;
+			IPFrame = (IpProt*)NetwData;
 			IPByte = (unsigned char*)&IPFrame->AdresZrodl;
 		}
 		else if (EType == 0x0806)
 		{
-			_arp = (ARP*)NetworkData;
+			_arp = (ARP*)NetwData;
 			IPByte = (unsigned char*)_arp->IPSender;
 		}
 		else return FALSE;
@@ -2154,17 +2192,17 @@ BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short ETyp
 
 	if ((PFilter->FilterMask & IS_IPTO) == IS_IPTO)
 	{
-		if (NetworkData == NULL || EType == 0)
+		if (NetwData == NULL || EType == 0)
 			return FALSE;
 
 		if (EType == 0x800)
 		{
-			IPFrame = (IpProt*)NetworkData;
+			IPFrame = (IpProt*)NetwData;
 			IPByte = (unsigned char*)&IPFrame->AdresDocel;
 		}
 		else if (EType == 0x0806)
 		{
-			_arp = (ARP*)NetworkData;
+			_arp = (ARP*)NetwData;
 			IPByte = (unsigned char*)_arp->IPTarget;
 		}
 		else return FALSE;
@@ -2179,12 +2217,12 @@ BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short ETyp
 
 	if ((PFilter->FilterMask & IS_SRCPORT) == IS_SRCPORT)
 	{
-		if (NetworkData == NULL || EType == 0)
+		if (NetwData == NULL || EType == 0)
 			return FALSE;
 
 		if (EType == 0x800)
 		{
-			IPFrame = (IpProt*)NetworkData;
+			IPFrame = (IpProt*)NetwData;
 
 			if (IPFrame->TypPakietu != 6 && IPFrame->TypPakietu != 17)
 				return FALSE;
@@ -2216,7 +2254,7 @@ BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short ETyp
 		}
 		else if (EType == 0x86DD)
 		{
-			IPV6Frame = (IPV6*)NetworkData;
+			IPV6Frame = (IPV6*)NetwData;
 
 			if (IPV6Frame->NastNaglowek != 6 && IPV6Frame->NastNaglowek != 17)
 				return FALSE;
@@ -2247,12 +2285,12 @@ BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short ETyp
 
 	if ((PFilter->FilterMask & IS_DSTPORT) == IS_DSTPORT)
 	{
-		if (NetworkData == NULL || EType == 0)
+		if (NetwData == NULL || EType == 0)
 			return FALSE;
 
 		if (EType == 0x800)
 		{
-			IPFrame = (IpProt*)NetworkData;
+			IPFrame = (IpProt*)NetwData;
 
 			if (IPFrame->TypPakietu != 6 && IPFrame->TypPakietu != 17)
 				return FALSE;
@@ -2284,7 +2322,7 @@ BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short ETyp
 		}
 		else if (EType == 0x86DD)
 		{
-			IPV6Frame = (IPV6*)NetworkData;
+			IPV6Frame = (IPV6*)NetwData;
 
 			if (IPV6Frame->NastNaglowek != 6 && IPV6Frame->NastNaglowek != 17)
 				return FALSE;
