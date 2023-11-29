@@ -2590,13 +2590,20 @@ int SaveEthernetTable(EHeader* EthernetFrame, fstream *pl)
 {
 	E802_3* EH;
 	char Text[500];
-	char ETypeText[45];
+	char ETypeText[100];
 	unsigned short EType;
 	PVOID P;
 	int i;
 	int DataSize;
+	LLC_H *LLC;
+	LLC_SNAP *LlcSnap;
+	BOOL isEType;
 
 	EH = (E802_3*)EthernetFrame->NetworkData;
+
+	LLC = NULL;
+	LlcSnap = NULL;
+	P = NULL;
 
 	DataSize = EthernetFrame->DataSize - sizeof(E802_3) + 1;
 
@@ -2607,32 +2614,78 @@ int SaveEthernetTable(EHeader* EthernetFrame, fstream *pl)
 
 	sprintf(&Text[strlen(Text)], "Adres Źródłowy : %x %x %x %x %x %x \n\n", EH->MAC_Zrodlowy[0], EH->MAC_Zrodlowy[1], EH->MAC_Zrodlowy[2], EH->MAC_Zrodlowy[3], EH->MAC_Zrodlowy[4], EH->MAC_Zrodlowy[5]);
 
+
+	pl->write(Text, strlen(Text));
+
 	memset(ETypeText, 0, 45);
 
 	MakeShortNumber((unsigned short*)EH->Typ,&EType);
 
-	LoadStringA(ModuleInstance, EType, ETypeText, 45);
+	isEType = FALSE;
+
+	if (EType <= 1500)
+	{
+		LLC = (LLC_H*)EH->Dane;
+
+		if ((LLC->DSAP == 0xAA && LLC->DSAP == 0xAA) || (LLC->DSAP == 0xAB && LLC->DSAP == 0xAB))
+		{
+			LlcSnap = (LLC_SNAP*)EH->Dane;
+			MakeShortNumber((unsigned short*)LlcSnap->SNAP.EtherType, &EType);
+			P = (PVOID)(((char*)EH->Dane) + sizeof(LLC_SNAP));
+			isEType = TRUE;
+			DataSize = DataSize - sizeof(LLC_SNAP);
+		}
+		else
+		{
+			P = (PVOID)(((char*)EH->Dane) + sizeof(LLC_H));
+			DataSize = DataSize - sizeof(LLC_H);
+		}
+
+	}
+	else if (EType >= 1536)
+	{
+		P = (PVOID)EH->Dane;
+		isEType = TRUE;
+	}
+
+	if (!isEType)
+	{
+		if (LLC != NULL)
+		{
+			memset(ETypeText, 0, 100);
+
+			LoadStringA(ModuleInstance, LLC->DSAP + 500, ETypeText, 100);
+		}
+	}
+	else if (EType >= 1536)
+	{
+		memset(ETypeText, 0, 100);
+
+		LoadStringA(ModuleInstance, EType, ETypeText, 100);
+	}
 
 	if (ETypeText[0] != 0)
-		sprintf(&Text[strlen(Text)], "ETYPE : %s\n\n", ETypeText);
+		sprintf(Text, "ETYPE : %s\n\n", ETypeText);
 	else
-		sprintf(&Text[strlen(Text)], "ETYPE : Nie znany\n\n");
+		sprintf(Text, "ETYPE : Nie znany\n\n");
 
 	pl->write(Text, strlen(Text));
-	
-	P = (PVOID)EH->Dane;
 
-	if (P != 0)
+	if (P != 0 && EType >= 1536 && isEType)
 	{
 		for (i = 0; i < 55; i++)
 		{
-			if (TSaveProc[i].EType == EType && EType != 0)
+			if (TSaveProc[i].EType == EType)
 			{
 				if (TSaveProc[i].Proc != 0)
 					(*TSaveProc[i].Proc)(P, pl, DataSize);
 				break;
 			}
 		}
+	}
+	else if (EType <= 1500)
+	{
+		SaveLLC(P, pl, EthernetFrame->DataSize);
 	}
 
 	return 0;

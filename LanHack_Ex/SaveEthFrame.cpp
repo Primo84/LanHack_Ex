@@ -350,7 +350,7 @@ int SaveIEE802_1qTagFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	MakeShortNumber((unsigned short*)bt, &EType);
 
-	sprintf(Text, "------------AVTP Audio Video Protocol------------\n\n");
+	sprintf(Text, "------------802_1Q_Tagged Frame Header------------\n\n");
 
 	sprintf(&Text[strlen(Text)], " Priority : %d  Canonical Format Mac (0-Canonical Format | 1-Non Cannonical Format) : %d  VLAN Identifier : %0.2X\n\n", tci.PCP, tci.DEI, tci.VID);
 
@@ -373,11 +373,6 @@ int SaveIEE802_1qTagFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	return 0;
 }
-typedef struct _EB
-{
-	unsigned char Buf[2000];
-
-}EB;
 
 int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 {
@@ -394,16 +389,12 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 	char Type61883[50];
 	unsigned short ReqCount, ConflictCount;
 	unsigned long LNumb;
-	EB* B;
-
 
 
 	if (DataSize <= 0) return 0;
 
 	bt = NULL;
 	rozm = 0;
-
-	B = (EB*)Frame;
 
 	memset(Text, 0, 5000);
 
