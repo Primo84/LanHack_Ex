@@ -704,7 +704,7 @@ typedef struct CIP_61883_Header
 	unsigned char DBC;
 	unsigned char Prefiks2 : 2;
 	unsigned char FMT : 6;
-	unsigned char FDF;
+	unsigned long FDF;
 	unsigned char SYT[2];
 
 }CIP_61883_H;
@@ -738,6 +738,13 @@ typedef union _AV_Data
 
 }AV_Data;
 
+typedef struct SourcePacketHeader
+{
+	unsigned char Reserved : 7;
+	unsigned short SPH_Cycle : 13;
+	unsigned short SPH_CycleOffset : 12;
+}SPH;
+
 typedef struct AVTP_Strem_Header			//cd=0
 {
 	unsigned char CD : 1;
@@ -756,6 +763,7 @@ typedef struct AVTP_Strem_Header			//cd=0
 	unsigned char GetWay_Info[4];
 	Packet_61883_H Packet_H;
 	CIP_61883_H CIP_H;
+	SPH sph;							//if CIP_H.SPH is 1 sph is present 
 	BOOLEAN isData;
 	union Data_
 	{

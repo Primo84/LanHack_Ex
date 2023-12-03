@@ -297,8 +297,12 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
 {
 	unsigned long W;
 	unsigned short S;
+	int DataOffset, MinStreamSize;
 
 	if (Frame == NULL || AVTP_SH == NULL) return 1;
+
+	DataOffset = 0;
+	MinStreamSize = 4;
 
 	memset(AVTP_SH, 0, sizeof(AVTP_StreamHead));
 
@@ -346,68 +350,100 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
 
 		AVTP_SH->Packet_H.SY = (S & 0x0F);
 
-		MakeLONGNumber(&(((unsigned char*)Frame)[24]), &W);
+		if (AVTP_SH->Packet_H.Tag == 1) // Cip Header is present 
+		{
+			MinStreamSize = 8;
 
-		AVTP_SH->CIP_H.Prefiks1 = W >> 30;
+			MakeLONGNumber(&(((unsigned char*)Frame)[24]), &W);
 
-		AVTP_SH->CIP_H.SID = (W & 0x3F000000) >> 24;
+			AVTP_SH->CIP_H.Prefiks1 = W >> 30;
 
-		AVTP_SH->CIP_H.DBS = (W & 0xFF0000) >> 16;
+			AVTP_SH->CIP_H.SID = (W & 0x3F000000) >> 24;
 
-		AVTP_SH->CIP_H.FN = (W & 0xC000) >> 14;
+			AVTP_SH->CIP_H.DBS = (W & 0xFF0000) >> 16;
 
-		AVTP_SH->CIP_H.QPC = (W & 0x3800) >> 11;
+			AVTP_SH->CIP_H.FN = (W & 0xC000) >> 14;
 
-		AVTP_SH->CIP_H.SPH = (W & 0x400) >> 10;
+			AVTP_SH->CIP_H.QPC = (W & 0x3800) >> 11;
 
-		AVTP_SH->CIP_H.Rsv = (W & 0x300) >> 8;
-		
-		AVTP_SH->CIP_H.DBC = (W & 0xFF);
+			AVTP_SH->CIP_H.SPH = (W & 0x400) >> 10;
 
-		MakeLONGNumber(&(((unsigned char*)Frame)[28]), &W);
+			AVTP_SH->CIP_H.Rsv = (W & 0x300) >> 8;
 
-		AVTP_SH->CIP_H.Prefiks2 = (W & 0xC0000000) >> 30;
+			AVTP_SH->CIP_H.DBC = (W & 0xFF);
 
-		AVTP_SH->CIP_H.FMT = (W & 0x3F000000) >> 24;
+			MakeLONGNumber(&(((unsigned char*)Frame)[28]), &W);
 
-		AVTP_SH->CIP_H.FDF = (W & 0xFF0000) >> 16;
+			AVTP_SH->CIP_H.Prefiks2 = (W & 0xC0000000) >> 30;
 
-		memcpy(AVTP_SH->CIP_H.SYT, &(((unsigned char*)Frame)[30]),2);
-		//AVTP_SH->CIP_H.SYT = (W & 0xFFFF);
+			AVTP_SH->CIP_H.FMT = (W & 0x3F000000) >> 24;
+
+			if (AVTP_SH->CIP_H.SPH == 1)
+			{
+				MinStreamSize = 12;
+
+				AVTP_SH->CIP_H.FDF = (W & 0xFFFFFF);
+
+				MakeLONGNumber(&(((unsigned char*)Frame)[32]), &W);
+
+				AVTP_SH->sph.Reserved = (W & 0xFE000000) >> 25;
+
+				AVTP_SH->sph.SPH_Cycle = (W & 0x1FFF000) >> 12;
+
+				AVTP_SH->sph.SPH_CycleOffset = (W & 0xFFF);
+
+				DataOffset = 4;
+			}
+			else
+			{
+				AVTP_SH->CIP_H.FDF = (W & 0xFF0000) >> 16;
+
+				memcpy(AVTP_SH->CIP_H.SYT, &(((unsigned char*)Frame)[30]), 2);
+
+			}
+			//AVTP_SH->CIP_H.SYT = (W & 0xFFFF);
+		}
 
 		MakeShortNumber(&AVTP_SH->Packet_H.StreamDataSize, &S);
 
-		if (S > 4)
+		if (S > MinStreamSize)
 		{
-
-			if (AVTP_SH->CIP_H.FMT == 0x10)
+			if (AVTP_SH->Packet_H.Tag == 1)
 			{
+				if (AVTP_SH->CIP_H.FMT == 0x10 && S > MinStreamSize + 4)
+				{
 
-				//	AVTP_SH->Data.Buffer = &(((unsigned char*)Frame)[32]);
-				AVTP_SH->Data.As = (AudioSample_6*)&(((unsigned char*)Frame)[32]);
+					//	AVTP_SH->Data.Buffer = &(((unsigned char*)Frame)[32]);
+					AVTP_SH->Data.As = (AudioSample_6*)&(((unsigned char*)Frame)[32 + DataOffset]);
 
-				AVTP_SH->isData = TRUE;
+					AVTP_SH->isData = TRUE;
+				}
+				else if (AVTP_SH->CIP_H.FMT == 0x1 && S > MinStreamSize + 4)
+				{
+					MakeLONGNumber(&(((unsigned char*)Frame)[32 + DataOffset]), &W);
+
+					AVTP_SH->Data.VD.VDSPC = ((unsigned char*)Frame)[32 + DataOffset];
+
+					AVTP_SH->Data.VD.sol = (W & 0x800000) >> 23;
+
+					AVTP_SH->Data.VD.sav = (W & 0x400000) >> 22;
+
+					AVTP_SH->Data.VD.LineNumber = (W & 0x3FFF00) >> 8;
+
+					AVTP_SH->Data.VD.R = (W & 0xC0) >> 6;
+
+					AVTP_SH->Data.VD.Ver = (W & 0x30) >> 4;
+
+					AVTP_SH->Data.VD.Type = (W & 0x0F);
+
+					AVTP_SH->Data.VD.VideoBytes = &(((unsigned char*)Frame)[36 + DataOffset]);
+
+					AVTP_SH->isData = TRUE;
+				}
 			}
-			else if (AVTP_SH->CIP_H.FMT == 0x1)
+			else
 			{
-				MakeLONGNumber(&(((unsigned char*)Frame)[32]), &W);
-
-				AVTP_SH->Data.VD.VDSPC = ((unsigned char*)Frame)[32];
-
-				AVTP_SH->Data.VD.sol = (W & 0x800000) >> 23;
-
-				AVTP_SH->Data.VD.sav = (W & 0x400000) >> 22;
-
-				AVTP_SH->Data.VD.LineNumber = (W & 0x3FFF00) >> 8;
-
-				AVTP_SH->Data.VD.R = (W & 0xC0) >> 6;
-
-				AVTP_SH->Data.VD.Ver = (W & 0x30) >> 4;
-
-				AVTP_SH->Data.VD.Type = (W & 0x0F);
-
-				AVTP_SH->Data.VD.VideoBytes = &(((unsigned char*)Frame)[36]);
-
+				AVTP_SH->Data.Buffer = &(((unsigned char*)Frame)[24]);
 				AVTP_SH->isData = TRUE;
 			}
 		}
@@ -419,12 +455,17 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
 int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 {
 	unsigned long Val;
-	int i, j;
+	int i, j, i1;
 	unsigned short sVal;
+	int DataOffset;
 
 	if (avtp == NULL || Buffer == NULL) return 1;
 
 	Val = 0;
+
+	i1 = 0;
+
+	DataOffset = 24;
 
 	if (avtp->CD == 1)
 		Val = Val | 0x80000000;
@@ -474,80 +515,89 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 
 	Val = Val | (avtp->Packet_H.SY << 16);
 
-	Val = Val | (avtp->CIP_H.Prefiks1 << 14);
+	if (avtp->Packet_H.Tag == 1)
+	{
+		DataOffset = 32;
 
-	Val = Val | (avtp->CIP_H.SID << 8);
+		Val = Val | (avtp->CIP_H.Prefiks1 << 14);
 
-	Val = Val | (avtp->CIP_H.DBS);
+		Val = Val | (avtp->CIP_H.SID << 8);
+
+		Val = Val | (avtp->CIP_H.DBS);
+
+		i1 = 25;
+	}
+	else
+		i1 = 23;
 
 	j = 4;
 
-	for (i = 22; i <= 25; i++)
+	for (i = 22; i <= i1; i++)
 	{
 		j--;
 		((unsigned char*)Buffer)[i] = ((unsigned char*)&Val)[j];
 	}
 
-	Val = 0;
-
-	Val = avtp->CIP_H.FN << 30;
-
-	Val = Val | (avtp->CIP_H.QPC << 27);
-
-	Val = Val | (avtp->CIP_H.SPH << 26);
-
-	Val = Val | (avtp->CIP_H.Rsv << 24);
-
-	Val = Val | (avtp->CIP_H.DBC << 16);
-
-	Val = Val | (avtp->CIP_H.Prefiks2 << 14);
-
-	Val = Val | (avtp->CIP_H.FMT << 8);
-
-	Val = Val | (avtp->CIP_H.FDF);
-
-	j = 4;
-
-	for (i = 26; i <= 29; i++)
+	if (avtp->Packet_H.Tag == 1)
 	{
-		j--;
-		((unsigned char*)Buffer)[i] = ((unsigned char*)&Val)[j];
-	}
+		Val = 0;
 
-	memcpy(&((unsigned char*)Buffer)[30], &avtp->CIP_H.SYT, 2);
+		Val = avtp->CIP_H.FN << 30;
 
-/*
-	((unsigned char*)Buffer)[30] = LOBYTE(avtp->CIP_H.SYT);
-	((unsigned char*)Buffer)[31] = HIBYTE(avtp->CIP_H.SYT);
-*/
-	MakeShortNumber(avtp->Packet_H.StreamDataSize, &sVal);
+		Val = Val | (avtp->CIP_H.QPC << 27);
 
-	if (sVal > 0 && avtp->isData==TRUE)
+		Val = Val | (avtp->CIP_H.SPH << 26);
 
-	{
-		if (avtp->CIP_H.FMT == 0x10 && avtp->Data.As != NULL)
+		Val = Val | (avtp->CIP_H.Rsv << 24);
+
+		Val = Val | (avtp->CIP_H.DBC << 16);
+
+		Val = Val | (avtp->CIP_H.Prefiks2 << 14);
+
+		Val = Val | (avtp->CIP_H.FMT << 8);
+
+		if (avtp->CIP_H.SPH == 0)
 		{
-			memcpy(&((unsigned char*)Buffer)[32], avtp->Data.As, sVal);
+
+			Val = Val | (avtp->CIP_H.FDF);
+
+			j = 4;
+
+			for (i = 26; i <= 29; i++)
+			{
+				j--;
+				((unsigned char*)Buffer)[i] = ((unsigned char*)&Val)[j];
+			}
+
+			memcpy(&((unsigned char*)Buffer)[30], &avtp->CIP_H.SYT, 2);
 		}
-		else if (avtp->CIP_H.FMT == 0x1)
+		else
 		{
+			j = 4;
+
+			for (i = 26; i <= 28; i++)
+			{
+				j--;
+				((unsigned char*)Buffer)[i] = ((unsigned char*)&Val)[j];
+			}
+
+			j = 3;
+
+			for (i = 29; i <= 31; i++)
+			{
+				j--;
+				((unsigned char*)Buffer)[i] = ((unsigned char*)&avtp->CIP_H.FDF)[j];
+			}
+
+			DataOffset = 36;
+
 			Val = 0;
 
-			Val = avtp->Data.VD.VDSPC << 24;
+			Val = (avtp->sph.Reserved << 25);
 
-			if (avtp->Data.VD.sol)
-				Val = Val | 0x800000;
+			Val = Val | (avtp->sph.SPH_Cycle << 12);
 
-			if (avtp->Data.VD.sav)
-				Val = Val | 0x400000;
-
-			Val = Val | (avtp->Data.VD.LineNumber << 8);
-
-			Val = Val | (avtp->Data.VD.R << 6);
-
-			Val = Val | (avtp->Data.VD.Ver << 4);
-
-			Val = Val | avtp->Data.VD.Type;
+			Val = Val | (avtp->sph.SPH_CycleOffset);
 
 			j = 4;
 
@@ -557,8 +607,60 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 				((unsigned char*)Buffer)[i] = ((unsigned char*)&Val)[j];
 			}
 
-			memcpy(&((unsigned char*)Buffer)[36], avtp->Data.VD.VideoBytes, sVal-4);
 		}
+	}
+/*
+	((unsigned char*)Buffer)[30] = LOBYTE(avtp->CIP_H.SYT);
+	((unsigned char*)Buffer)[31] = HIBYTE(avtp->CIP_H.SYT);
+*/
+	MakeShortNumber(avtp->Packet_H.StreamDataSize, &sVal);
+
+	if (sVal > 0 && avtp->isData==TRUE)
+	{
+		if(avtp->Packet_H.Tag==1)
+		{ 
+			sVal -= 8;
+
+			if (avtp->CIP_H.SPH == 1)
+				sVal -= 4;
+			
+			if (avtp->CIP_H.FMT == 0x10 && avtp->Data.As != NULL)
+			{
+				memcpy(&((unsigned char*)Buffer)[DataOffset], avtp->Data.As, sVal);
+			}
+			else if (avtp->CIP_H.FMT == 0x1)
+			{
+				Val = 0;
+
+				Val = avtp->Data.VD.VDSPC << 24;
+
+				if (avtp->Data.VD.sol)
+					Val = Val | 0x800000;
+
+				if (avtp->Data.VD.sav)
+					Val = Val | 0x400000;
+
+				Val = Val | (avtp->Data.VD.LineNumber << 8);
+
+				Val = Val | (avtp->Data.VD.R << 6);
+
+				Val = Val | (avtp->Data.VD.Ver << 4);
+
+				Val = Val | avtp->Data.VD.Type;
+
+				j = 4;
+
+				for (i = DataOffset; i <= DataOffset + 3; i++)
+				{
+					j--;
+					((unsigned char*)Buffer)[i] = ((unsigned char*)&Val)[j];
+				}
+
+				memcpy(&((unsigned char*)Buffer)[DataOffset + 4], avtp->Data.VD.VideoBytes, sVal);
+			}
+		}
+		else if(avtp->Data.Buffer != NULL)
+			memcpy(&((unsigned char*)Buffer)[24], avtp->Data.Buffer, sVal);
 	}
 
 	return 0;
