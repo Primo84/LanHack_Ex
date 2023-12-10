@@ -63,6 +63,12 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 			ReleaseCapture();
 			break;
 		}
+
+		case WM_RBUTTONUP:
+		{
+			RecivePacket(EH);
+			break;
+		}
 		
 		case WM_MOUSEMOVE:
 		{
@@ -1121,10 +1127,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 								0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8,\
 								0xA1, 0x23, 0xC4, 0x55,\
 								0xB1, 0xB2, 0xB3, 0xB4,\
-								0x00, 0x1c, /*Packet Size == 28(16 + 8 CIP + 4 First Video)*/ 0x72, 0xAC,\
+								0x00, 0x1C, /*Packet Size == 28(16 + 8 CIP + 4 First Video)*/ 0x72, 0xAC,\
 								0x2D, 0x05, 0xB9, 0x12, \
-								0x90, 0x3A, 0x00, 0x54,\
-							/*	0xA0, 0x06, 0x00, 0x7E, *//*SPH Header(sph = 1 tag = 1)*/ \
+								0x90, 0x16, 0x00, 0x54,\
+							/*	0xA0, 0x06, 0x00, 0x7E,*/ /*SPH Header(sph = 1 tag = 1)*/ \
 								0x48, 0x45, 0xAD, 0xD9 }; // First 4 Video Meta Data Bytes
 
 	unsigned char Buffer1[56];
@@ -1134,8 +1140,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 	EHead_802_3 E802_3;
 	TF_802_1g TF;
 	TCI tci;
-	//EHeader EH;
 
+	//EHeader EH;
 
 	for (i = 0; i < 16; i++)
 		Buffer[36 + i] = i;
@@ -1212,15 +1218,15 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 			Miniport = GetMiniports(&MiniportCount);
 			ShowWindow(WindowHandle,SW_SHOWNORMAL);
 
-			/*
+			
 
 			memcpy(&RecvProt_Buf.Buffer[0], &EH, sizeof(EHeader));
 			RecvProt_Buf.PIndex = 1;
 			RecvProt_Buf.TotalCount = 1;
 
-			SaveTable(&RecvProt_Buf, WindowHandle, Module_Instance);
+		//	SaveTable(&RecvProt_Buf, WindowHandle, Module_Instance);
 
-	*/
+	
 
 			while (GetMessage(&message, NULL, 0, 0))
 			{

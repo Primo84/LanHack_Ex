@@ -636,6 +636,14 @@ typedef struct TaggedFrame_802_1q
 
 ----------------------------------------------------------*/
 
+typedef struct EVT_N_SFC_
+{
+	unsigned char EVT :2;
+	unsigned char N : 1;
+	unsigned char SFC : 3;
+
+}EVTNSFC;
+
 
 typedef struct AVTP_Control_Header
 {
@@ -709,13 +717,21 @@ typedef struct CIP_61883_Header
 
 }CIP_61883_H;
 
-typedef struct Audio_Sample_61883_6			//Data Payload Audio Sample for Audio 61883_6 packet format 
+typedef struct Audio_Sample_61883_6			//Data Payload Audio Sample for Audio 61883_6 packet (AM824 format FDF = 0x00)
 {
 	unsigned char Label;
 	unsigned char Sample[3];
 
 }AudioSample_6;
 
+typedef struct Audio_24bit					//Data Payload Audio Sample for Audio 61883_6 packet (24bit format FDF = 0x01)
+{
+	unsigned char SampleA[3];
+	unsigned char SampleB[3];
+	unsigned char SampleC[3];
+	unsigned char SampleD[3];
+
+}Audio24Bit;
 
 typedef struct Video_Data_61883_8			//Data Video Payload for Vidoe 61883_8 packet format 
 {
@@ -730,13 +746,72 @@ typedef struct Video_Data_61883_8			//Data Video Payload for Vidoe 61883_8 packe
 
 }VideoData_8;
 
-typedef union _AV_Data
+typedef struct MPEG_2_TransportStream			//61883-4 standard
 {
-	unsigned char* Buffer;
-	AudioSample_6* As;
-	VideoData_8 VD;
+	unsigned char Sync_Byte;
+	unsigned char Transport_Error_Indicator : 1;
+	unsigned char Payload_Start_Indicator : 1;	//PSI or PES packet
+	unsigned char Transport_Priority : 1;		//Useful in scalable MPEG2
+	unsigned short PID : 13;
+	unsigned char Transport_Scrambling_Control : 2;
+	unsigned char Adaptation_Field_Control : 2;
+	unsigned char Continuity_Counter : 4;			//Counts Packets of PES
 
-}AV_Data;
+	struct Adaptation_Field
+	{
+		unsigned char Length;
+		unsigned char Discontinuity_Indicator : 1;
+		unsigned char Random_Access_Indicator : 1;
+		unsigned char ES_Priority_Indicator : 1;
+
+		struct Various_Flags			//PCR Flags OPCR Flags....
+		{
+			unsigned char PCR_Flag : 1;
+			unsigned char OPCR_Flag : 1;
+			unsigned char SplicingPoint_Flag : 1;
+			unsigned char TransportPrivateData_Flag : 1;
+			unsigned char AdaptationFieldExtension_Flag : 1;
+
+		}Various_Fl;
+
+		struct Optional_Fields
+		{
+			UINT64 PCR : 48;
+			UINT64 OPCR : 48;
+			unsigned char SpliceCountdown;
+			unsigned char TransportPrivateDataLenght;
+			unsigned char* TransportPrivData;
+
+			struct Adaptation_Extension
+			{
+				unsigned char AdaptationExtLength;
+				unsigned char LegalTimeWindowFl : 1;
+				unsigned char PiecewiseRateFl : 1;
+				unsigned char SeamlessSpliceFl : 1;
+				unsigned char Reserved : 5;
+
+				struct Optional_Fields
+				{
+					unsigned char LTW_ValidFl : 1;
+					unsigned short LTW_Offset : 15;
+					unsigned char Reserved : 2;
+					unsigned long PiecewiseRate : 22;
+					unsigned char SpliceType : 4;
+					UINT64 DTS_NextAccess : 36;
+
+				}OptionalFields;
+
+			}AdaptExt;
+
+			unsigned char* StuffingBytes;
+
+		}OptionalF;
+
+	}AdaptationField;
+
+	unsigned char *Payload;
+
+}MPEG_2TS;
 
 typedef struct SourcePacketHeader
 {
@@ -769,7 +844,11 @@ typedef struct AVTP_Strem_Header			//cd=0
 	{
 		unsigned char *Buffer;
 
-		AudioSample_6 *As;
+		AudioSample_6 *As;				//61883-6
+
+		Audio24Bit* ABit24;				//61883-6
+
+		MPEG_2TS MPEG2;					//61883-4
 
 		VideoData_8 VD;
 
@@ -1019,12 +1098,17 @@ int ConvertTCItoBuffer(TCI* tci, PVOID Buffer);				//Write TCI struct to Buffer
 
 
 */
+int MakeEVT_N_SFC(unsigned char FDF, EVTNSFC *evt_n_sfc);
+
+int MakeAVTP_CIP_SPH_Header(PVOID FrameByte, CIP_61883_H *CIP_H, SPH *sph);
 
 int MakeAVTP_ControlHead(PVOID Frame, AVTP_ControlHead* AVTP_CH);
 
 int ConvertAVTPControlHeadertoBuffer(AVTP_ControlHead *avtp, PVOID Buffer);				//Write AVTP Header to buffer
 
 int ConvertMAAPControlHeadertoBuffer(MAAP_Prot* avtp, PVOID Buffer);					//Write MAAP Header to buffer		
+
+int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer);
 
 int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH);
 
@@ -1089,6 +1173,8 @@ int MakeRootBridgeId(unsigned char *RB_Id, RootBridgeId *RBID);
 int MakeShortNumber(PVOID Buffer, unsigned short* Number);				// Buffer can be either pointer to short type or pointer to Ethernet Buffer where is short Value
 
 int MakeLONGNumber(PVOID Bytes, unsigned long* Number);
+
+int MakeLONGLONGNumber(PVOID Bytes, UINT64* Number, int NumBytes);    //NumBytes max 8. If 0 then 8 bytes is take
 
 int MakeFrameControl(unsigned short FrameContr, FrameControl* FrmContr);
 

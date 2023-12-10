@@ -389,6 +389,8 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 	char Type61883[50];
 	unsigned short ReqCount, ConflictCount;
 	unsigned long LNumb;
+	EVTNSFC evt_n_sfc;
+	unsigned char FDF;
 
 
 	if (DataSize <= 0) return 0;
@@ -572,8 +574,22 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 					if (AVTP_SH.isData == 1)
 					{
-						rozm = StreamSize - 8;
-						bt = (unsigned char*)AVTP_SH.Data.As;
+						FDF = ((unsigned char*)&AVTP_SH.CIP_H.FDF)[0];
+
+						if (FDF != 0xFF)								// 0xFF - NO DATA Packet
+						{
+							if (FDF >= 0 && FDF <= 0x3F)
+							{
+								rozm = StreamSize - 8;
+
+								MakeEVT_N_SFC(FDF, &evt_n_sfc);
+
+								if(evt_n_sfc.EVT == 0x00)
+									bt = (unsigned char*)AVTP_SH.Data.As;
+								else if(evt_n_sfc.EVT == 0x01)
+									bt = (unsigned char*)AVTP_SH.Data.ABit24;
+							}
+						}
 					}
 
 				}

@@ -104,6 +104,37 @@ int MakeLONGNumber(PVOID Bytes, unsigned long* Number)
 	return 0;
 }
 
+int MakeLONGLONGNumber(PVOID Bytes, UINT64* Number, int NumBytes)
+{
+	unsigned char* bt, * bt1;
+	int i, j;
+	int Num;
+
+	if (Number == NULL) return 1;
+
+	bt = (unsigned char*)Number;
+	bt1 = (unsigned char*)Bytes;
+
+	if (NumBytes <= 0 || NumBytes >= 8)
+	{
+		j = 8;
+		Num = 8;
+	}
+	else
+	{
+		j = NumBytes;
+		Num = NumBytes;
+	}
+
+	for (i = 0; i < Num; i++)
+	{
+		j--;
+		bt[i] = bt1[j];
+	}
+
+	return 0;
+}
+
 int MakeIP_IHL_Version(unsigned char IHLV, IHL_V* ihlv)
 {
 
@@ -180,7 +211,76 @@ int ConvertTCItoBuffer(TCI* tci, PVOID Buffer)
 	return 0;
 }
 
+int MakeEVT_N_SFC(unsigned char FDF, EVTNSFC* evt_n_sfc)
+{
+	if (evt_n_sfc == NULL)
+		return 1;
 
+	evt_n_sfc->EVT = (FDF & 0x30) >> 4;
+
+	evt_n_sfc->N = (FDF & 0x8) >> 3;
+
+	evt_n_sfc->SFC = (FDF & 0x7);
+
+	return 0;
+}
+
+int MakeAVTP_CIP_SPH_Header(PVOID FrameByte, CIP_61883_H* CIP_H, SPH* sph)
+{
+	unsigned long W;
+
+	MakeLONGNumber(FrameByte, &W);
+
+	CIP_H->Prefiks1 = W >> 30;
+
+	CIP_H->SID = (W & 0x3F000000) >> 24;
+
+	CIP_H->DBS = (W & 0xFF0000) >> 16;
+
+	CIP_H->FN = (W & 0xC000) >> 14;
+
+	CIP_H->QPC = (W & 0x3800) >> 11;
+
+	CIP_H->SPH = (W & 0x400) >> 10;
+
+	CIP_H->Rsv = (W & 0x300) >> 8;
+
+	CIP_H->DBC = (W & 0xFF);
+
+	MakeLONGNumber(&(((unsigned char*)FrameByte)[4]), &W);
+
+	CIP_H->Prefiks2 = (W & 0xC0000000) >> 30;
+
+	CIP_H->FMT = (W & 0x3F000000) >> 24;
+
+	if (CIP_H->SPH == 1)
+	{
+
+		CIP_H->FDF = (W & 0xFFFFFF);
+
+		if (sph != NULL)
+		{
+
+			MakeLONGNumber(&(((unsigned char*)FrameByte)[8]), &W);
+
+			sph->Reserved = (W & 0xFE000000) >> 25;
+
+			sph->SPH_Cycle = (W & 0x1FFF000) >> 12;
+
+			sph->SPH_CycleOffset = (W & 0xFFF);
+		}
+
+	}
+	else
+	{
+		CIP_H->FDF = (W & 0xFF0000) >> 16;
+
+		memcpy(CIP_H->SYT, &(((unsigned char*)FrameByte)[6]), 2);
+
+	}
+
+	return 0;
+}
 
 int MakeAVTP_ControlHead(PVOID Frame, AVTP_ControlHead* AVTP_CH)
 {
@@ -293,11 +393,190 @@ int ConvertMAAPControlHeadertoBuffer(MAAP_Prot* avtp, PVOID Buffer)
 	return 0;
 }
 
+int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer)
+{
+	if (mpg2TS == NULL || Buffer == NULL)
+		return 1;
+	unsigned long W;
+	unsigned short S;
+	UINT64 U_LL;
+	int i, j;
+	int Offset;
+
+	MakeLONGNumber(Buffer, &W);
+
+	memset(mpg2TS, 0, sizeof(MPEG_2TS));
+
+	Offset = 0;
+
+	mpg2TS->Sync_Byte = ((unsigned char*)Buffer)[0];
+
+	mpg2TS->Transport_Error_Indicator = (W & 0x800000) >> 23;
+
+	mpg2TS->Payload_Start_Indicator = (W & 0x400000) >> 22;
+
+	mpg2TS->Transport_Priority = (W & 0x200000) >> 21;
+
+	mpg2TS->PID = (W & 0x1FFF00) >> 8;
+
+	mpg2TS->Transport_Scrambling_Control = (W & 0xC0) >> 6;
+
+	mpg2TS->Adaptation_Field_Control = (W & 0x30) >> 4;
+
+	mpg2TS->Continuity_Counter = (W & 0x0F);
+
+	if (mpg2TS->Adaptation_Field_Control == 2 || mpg2TS->Adaptation_Field_Control == 3)
+	{
+		mpg2TS->AdaptationField.Length = ((unsigned char*)Buffer)[4];
+		
+		MakeShortNumber(&((unsigned char*)Buffer)[4], &S);
+
+		mpg2TS->AdaptationField.Discontinuity_Indicator = (S & 0x80) >> 7;
+
+		mpg2TS->AdaptationField.Random_Access_Indicator = (S & 0x40) >> 6;
+
+		mpg2TS->AdaptationField.ES_Priority_Indicator = (S & 0x20) >> 5;
+
+		mpg2TS->AdaptationField.Various_Fl.PCR_Flag = (S & 0x10) >> 4;
+
+		mpg2TS->AdaptationField.Various_Fl.OPCR_Flag = (S & 0x08) >> 3;
+
+		mpg2TS->AdaptationField.Various_Fl.SplicingPoint_Flag = (S & 0x04) >> 2;
+
+		mpg2TS->AdaptationField.Various_Fl.TransportPrivateData_Flag = (S & 0x02) >> 1;
+
+		mpg2TS->AdaptationField.Various_Fl.AdaptationFieldExtension_Flag = (S & 0x01);
+
+		if (mpg2TS->AdaptationField.Various_Fl.PCR_Flag == 1)
+		{
+
+			j = 6;
+
+			for (i = 5; i >= 0; i--)
+			{
+				U_LL = 0;
+
+				((unsigned char*)&U_LL)[i] = ((unsigned char*)Buffer)[j];
+
+				j++;
+			}
+
+			mpg2TS->AdaptationField.OptionalF.PCR = U_LL;
+
+			Offset += 6;
+		}
+
+		if (mpg2TS->AdaptationField.Various_Fl.OPCR_Flag == 1)
+		{
+			j = 6 + Offset;
+
+			for (i = 5; i >= 0; i--)
+			{
+				U_LL = 0;
+
+				((unsigned char*)&U_LL)[i] = ((unsigned char*)Buffer)[j];
+
+				j++;
+			}
+
+			mpg2TS->AdaptationField.OptionalF.OPCR = U_LL;
+
+			Offset += 6;
+		}
+
+		if (mpg2TS->AdaptationField.Various_Fl.SplicingPoint_Flag == 1)
+		{
+			mpg2TS->AdaptationField.OptionalF.SpliceCountdown = ((unsigned char*)Buffer)[6 + Offset];
+			Offset++;
+		}
+
+		if (mpg2TS->AdaptationField.Various_Fl.TransportPrivateData_Flag == 1)
+		{
+			mpg2TS->AdaptationField.OptionalF.TransportPrivateDataLenght = ((unsigned char*)Buffer)[6 + Offset];
+			mpg2TS->AdaptationField.OptionalF.TransportPrivData = &((unsigned char*)Buffer)[7 + Offset];
+
+			Offset += mpg2TS->AdaptationField.OptionalF.TransportPrivateDataLenght + 1;
+		}
+
+		if (mpg2TS->AdaptationField.Various_Fl.AdaptationFieldExtension_Flag == 1)
+		{
+
+			MakeShortNumber(&(((unsigned char*)Buffer)[6 + Offset]), &S);
+
+			mpg2TS->AdaptationField.OptionalF.AdaptExt.AdaptationExtLength = (S & 0xFF00) >> 8;
+
+			mpg2TS->AdaptationField.OptionalF.AdaptExt.LegalTimeWindowFl = (S & 0x80) >> 7;
+
+			mpg2TS->AdaptationField.OptionalF.AdaptExt.PiecewiseRateFl = (S & 0x40) >> 6;
+
+			mpg2TS->AdaptationField.OptionalF.AdaptExt.SeamlessSpliceFl = (S & 0x20) >> 5;
+
+			mpg2TS->AdaptationField.OptionalF.AdaptExt.Reserved = (S & 0x1F);
+
+			Offset += 2;
+
+			if (mpg2TS->AdaptationField.OptionalF.AdaptExt.LegalTimeWindowFl == 1)
+			{
+
+				MakeShortNumber(&(((unsigned char*)Buffer)[6 + Offset]), &S);
+
+				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.LTW_ValidFl = (S & 0x8000) >> 15;
+
+				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.LTW_Offset = (S & 0x7FFF);
+
+				Offset += 2;
+			}
+		
+			if (mpg2TS->AdaptationField.OptionalF.AdaptExt.PiecewiseRateFl == 1)
+			{
+
+				U_LL = 0;
+
+				MakeLONGLONGNumber(&(((unsigned char*)Buffer)[6 + Offset]), &U_LL, 3);
+
+				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.Reserved = (S & 0xc00000) >> 22;
+
+				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.PiecewiseRate = (S & 0x3fffff);
+
+				Offset += 3;
+			}
+
+			if (mpg2TS->AdaptationField.OptionalF.AdaptExt.SeamlessSpliceFl == 1)
+			{
+
+				U_LL = 0;
+
+				MakeLONGLONGNumber(&(((unsigned char*)Buffer)[6 + Offset]), &U_LL, 5);
+
+				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.SpliceType = (S & 0xf000000000) >> 36;
+
+				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.DTS_NextAccess = (S & 0x0efffefffe);
+
+				Offset += 5;
+			}
+		}
+
+		mpg2TS->AdaptationField.OptionalF.StuffingBytes = &(((unsigned char*)Buffer)[6 + Offset]);
+
+	}
+
+	if (mpg2TS->Adaptation_Field_Control == 0x01)
+		mpg2TS->Payload = ((unsigned char*)Buffer) + 4;
+	else if (mpg2TS->Adaptation_Field_Control == 0x03)
+		mpg2TS->Payload = ((unsigned char*)Buffer) + 4 + mpg2TS->AdaptationField.Length;
+	else
+		mpg2TS->Payload = NULL;
+
+	return 0;
+}
+
 int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
 {
 	unsigned long W;
 	unsigned short S;
 	int DataOffset, MinStreamSize;
+	unsigned char FDF;
+	EVTNSFC evt_n_sfc;
 
 	if (Frame == NULL || AVTP_SH == NULL) return 1;
 
@@ -354,54 +633,14 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
 		{
 			MinStreamSize = 8;
 
-			MakeLONGNumber(&(((unsigned char*)Frame)[24]), &W);
-
-			AVTP_SH->CIP_H.Prefiks1 = W >> 30;
-
-			AVTP_SH->CIP_H.SID = (W & 0x3F000000) >> 24;
-
-			AVTP_SH->CIP_H.DBS = (W & 0xFF0000) >> 16;
-
-			AVTP_SH->CIP_H.FN = (W & 0xC000) >> 14;
-
-			AVTP_SH->CIP_H.QPC = (W & 0x3800) >> 11;
-
-			AVTP_SH->CIP_H.SPH = (W & 0x400) >> 10;
-
-			AVTP_SH->CIP_H.Rsv = (W & 0x300) >> 8;
-
-			AVTP_SH->CIP_H.DBC = (W & 0xFF);
-
-			MakeLONGNumber(&(((unsigned char*)Frame)[28]), &W);
-
-			AVTP_SH->CIP_H.Prefiks2 = (W & 0xC0000000) >> 30;
-
-			AVTP_SH->CIP_H.FMT = (W & 0x3F000000) >> 24;
+			MakeAVTP_CIP_SPH_Header(&(((unsigned char*)Frame)[24]), &AVTP_SH->CIP_H, &AVTP_SH->sph);
 
 			if (AVTP_SH->CIP_H.SPH == 1)
 			{
 				MinStreamSize = 12;
 
-				AVTP_SH->CIP_H.FDF = (W & 0xFFFFFF);
-
-				MakeLONGNumber(&(((unsigned char*)Frame)[32]), &W);
-
-				AVTP_SH->sph.Reserved = (W & 0xFE000000) >> 25;
-
-				AVTP_SH->sph.SPH_Cycle = (W & 0x1FFF000) >> 12;
-
-				AVTP_SH->sph.SPH_CycleOffset = (W & 0xFFF);
-
 				DataOffset = 4;
 			}
-			else
-			{
-				AVTP_SH->CIP_H.FDF = (W & 0xFF0000) >> 16;
-
-				memcpy(AVTP_SH->CIP_H.SYT, &(((unsigned char*)Frame)[30]), 2);
-
-			}
-			//AVTP_SH->CIP_H.SYT = (W & 0xFFFF);
 		}
 
 		MakeShortNumber(&AVTP_SH->Packet_H.StreamDataSize, &S);
@@ -410,15 +649,32 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
 		{
 			if (AVTP_SH->Packet_H.Tag == 1)
 			{
-				if (AVTP_SH->CIP_H.FMT == 0x10 && S > MinStreamSize + 4)
+				if (AVTP_SH->CIP_H.FMT == 0x10 && S > MinStreamSize + 4)			//61883-6 Audio Data Block
 				{
+					FDF = ((unsigned char*)&AVTP_SH->CIP_H.FDF)[0];
 
-					//	AVTP_SH->Data.Buffer = &(((unsigned char*)Frame)[32]);
-					AVTP_SH->Data.As = (AudioSample_6*)&(((unsigned char*)Frame)[32 + DataOffset]);
+					if (FDF != 0xFF)								// 0xFF - NO DATA Packet
+					{
+						if (FDF >= 0 && FDF <= 0x3F)
+						{
+							MakeEVT_N_SFC(FDF, &evt_n_sfc);
 
-					AVTP_SH->isData = TRUE;
+							if (evt_n_sfc.EVT == 0x00)					//AM824 Data format
+							{
+								AVTP_SH->Data.As = (AudioSample_6*)&(((unsigned char*)Frame)[32 + DataOffset]);
+
+								AVTP_SH->isData = TRUE;
+							}
+							else if (evt_n_sfc.EVT == 0x01)				//24 bit * 4 Audio Pack
+							{
+								AVTP_SH->Data.ABit24= (Audio24Bit*)&(((unsigned char*)Frame)[32 + DataOffset]);
+
+								AVTP_SH->isData = TRUE;
+							}
+						}
+					}
 				}
-				else if (AVTP_SH->CIP_H.FMT == 0x1 && S > MinStreamSize + 4)
+				else if (AVTP_SH->CIP_H.FMT == 0x1 && S > MinStreamSize + 4)			//61883-8 Video Data Block
 				{
 					MakeLONGNumber(&(((unsigned char*)Frame)[32 + DataOffset]), &W);
 
@@ -440,6 +696,13 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
 
 					AVTP_SH->isData = TRUE;
 				}
+				else if (AVTP_SH->CIP_H.FMT == 0x40 && S > MinStreamSize + 4)					//61883-4 MPEG2_TS Data Block
+				{
+
+					MakeAVTP_MPEG2_tsHeader(&AVTP_SH->Data.MPEG2, &(((unsigned char*)Frame)[32 + DataOffset]));
+
+					AVTP_SH->isData = TRUE;
+				}
 			}
 			else
 			{
@@ -458,6 +721,8 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 	int i, j, i1;
 	unsigned short sVal;
 	int DataOffset;
+	EVTNSFC evt_n_sfc;
+	unsigned char FDF;
 
 	if (avtp == NULL || Buffer == NULL) return 1;
 
@@ -624,11 +889,28 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 			if (avtp->CIP_H.SPH == 1)
 				sVal -= 4;
 			
-			if (avtp->CIP_H.FMT == 0x10 && avtp->Data.As != NULL)
+			if (avtp->CIP_H.FMT == 0x10 && sVal>4)
 			{
-				memcpy(&((unsigned char*)Buffer)[DataOffset], avtp->Data.As, sVal);
+				FDF = ((unsigned char*)&avtp->CIP_H.FDF)[0];
+
+				if (FDF != 0xFF)								// 0xFF - NO DATA Packet
+				{
+					if (FDF >= 0 && FDF <= 0x3F)
+					{
+						MakeEVT_N_SFC(FDF, &evt_n_sfc);
+
+						if (evt_n_sfc.EVT == 0x00 && avtp->Data.As != NULL)
+						{
+							memcpy(&((unsigned char*)Buffer)[DataOffset], avtp->Data.As, sVal);
+						}
+						else if (evt_n_sfc.EVT == 0x01 && avtp->Data.ABit24 != NULL)
+						{
+							memcpy(&((unsigned char*)Buffer)[DataOffset], avtp->Data.ABit24, sVal);
+						}
+					}
+				}
 			}
-			else if (avtp->CIP_H.FMT == 0x1)
+			else if (avtp->CIP_H.FMT == 0x1 && sVal > 4)
 			{
 				Val = 0;
 
@@ -656,7 +938,7 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 					((unsigned char*)Buffer)[i] = ((unsigned char*)&Val)[j];
 				}
 
-				memcpy(&((unsigned char*)Buffer)[DataOffset + 4], avtp->Data.VD.VideoBytes, sVal);
+				memcpy(&((unsigned char*)Buffer)[DataOffset + 4], avtp->Data.VD.VideoBytes, sVal - 4);
 			}
 		}
 		else if(avtp->Data.Buffer != NULL)
