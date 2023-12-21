@@ -483,7 +483,7 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 		}
 		else // AVTP Stream Vidoe or Audio Packet  
 		{
-			MakeAVTP_StreamHead(Frame, &AVTP_SH);
+			MakeAVTP_StreamHead(Frame, &AVTP_SH, DataSize);
 
 			sprintf(Text, "------------AVTP Stream Packet Header------------\n\n");
 

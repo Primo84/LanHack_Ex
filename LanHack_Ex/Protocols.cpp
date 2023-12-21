@@ -229,55 +229,70 @@ int MakeAVTP_CIP_SPH_Header(PVOID FrameByte, CIP_61883_H* CIP_H, SPH* sph)
 {
 	unsigned long W;
 
-	MakeLONGNumber(FrameByte, &W);
-
-	CIP_H->Prefiks1 = W >> 30;
-
-	CIP_H->SID = (W & 0x3F000000) >> 24;
-
-	CIP_H->DBS = (W & 0xFF0000) >> 16;
-
-	CIP_H->FN = (W & 0xC000) >> 14;
-
-	CIP_H->QPC = (W & 0x3800) >> 11;
-
-	CIP_H->SPH = (W & 0x400) >> 10;
-
-	CIP_H->Rsv = (W & 0x300) >> 8;
-
-	CIP_H->DBC = (W & 0xFF);
-
-	MakeLONGNumber(&(((unsigned char*)FrameByte)[4]), &W);
-
-	CIP_H->Prefiks2 = (W & 0xC0000000) >> 30;
-
-	CIP_H->FMT = (W & 0x3F000000) >> 24;
-
-	if (CIP_H->SPH == 1)
+	if (CIP_H != NULL)
 	{
+		MakeLONGNumber(FrameByte, &W);
 
-		CIP_H->FDF = (W & 0xFFFFFF);
+		CIP_H->Prefiks1 = W >> 30;
 
-		if (sph != NULL)
+		CIP_H->SID = (W & 0x3F000000) >> 24;
+
+		CIP_H->DBS = (W & 0xFF0000) >> 16;
+
+		CIP_H->FN = (W & 0xC000) >> 14;
+
+		CIP_H->QPC = (W & 0x3800) >> 11;
+
+		CIP_H->SPH = (W & 0x400) >> 10;
+
+		CIP_H->Rsv = (W & 0x300) >> 8;
+
+		CIP_H->DBC = (W & 0xFF);
+
+		MakeLONGNumber(&(((unsigned char*)FrameByte)[4]), &W);
+
+		CIP_H->Prefiks2 = (W & 0xC0000000) >> 30;
+
+		CIP_H->FMT = (W & 0x3F000000) >> 24;
+
+		if (CIP_H->SPH == 1)
 		{
 
-			MakeLONGNumber(&(((unsigned char*)FrameByte)[8]), &W);
+			CIP_H->FDF = (W & 0xFFFFFF);
 
-			sph->Reserved = (W & 0xFE000000) >> 25;
+			if (sph != NULL)
+			{
 
-			sph->SPH_Cycle = (W & 0x1FFF000) >> 12;
+				MakeLONGNumber(&(((unsigned char*)FrameByte)[8]), &W);
 
-			sph->SPH_CycleOffset = (W & 0xFFF);
+				sph->Reserved = (W & 0xFE000000) >> 25;
+
+				sph->SPH_Cycle = (W & 0x1FFF000) >> 12;
+
+				sph->SPH_CycleOffset = (W & 0xFFF);
+			}
+
+		}
+		else
+		{
+			CIP_H->FDF = (W & 0xFF0000) >> 16;
+
+			memcpy(CIP_H->SYT, &(((unsigned char*)FrameByte)[6]), 2);
+
 		}
 
 	}
-	else
+	else if (sph != NULL)
 	{
-		CIP_H->FDF = (W & 0xFF0000) >> 16;
+		MakeLONGNumber(FrameByte, &W);
 
-		memcpy(CIP_H->SYT, &(((unsigned char*)FrameByte)[6]), 2);
+		sph->Reserved = (W & 0xFE000000) >> 25;
 
+		sph->SPH_Cycle = (W & 0x1FFF000) >> 12;
+
+		sph->SPH_CycleOffset = (W & 0xFFF);
 	}
+	else return 1;
 
 	return 0;
 }
@@ -405,8 +420,6 @@ int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer)
 
 	MakeLONGNumber(Buffer, &W);
 
-	memset(mpg2TS, 0, sizeof(MPEG_2TS));
-
 	Offset = 0;
 
 	mpg2TS->Sync_Byte = ((unsigned char*)Buffer)[0];
@@ -450,11 +463,12 @@ int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer)
 		if (mpg2TS->AdaptationField.Various_Fl.PCR_Flag == 1)
 		{
 
-			j = 6;
+			j = 6;												//6-th Byte(4 first bytes MPEG2_TS Stream packet header + 2 bytes Adaptation Field Header  )
+
+			U_LL = 0;
 
 			for (i = 5; i >= 0; i--)
 			{
-				U_LL = 0;
 
 				((unsigned char*)&U_LL)[i] = ((unsigned char*)Buffer)[j];
 
@@ -463,16 +477,17 @@ int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer)
 
 			mpg2TS->AdaptationField.OptionalF.PCR = U_LL;
 
-			Offset += 6;
+			Offset += 6;										//+6 Bytes(4 first bytes MPEG2_TS Stream packet header + 2 bytes Adaptation Field Header  )
 		}
 
 		if (mpg2TS->AdaptationField.Various_Fl.OPCR_Flag == 1)
 		{
 			j = 6 + Offset;
 
+			U_LL = 0;
+
 			for (i = 5; i >= 0; i--)
 			{
-				U_LL = 0;
 
 				((unsigned char*)&U_LL)[i] = ((unsigned char*)Buffer)[j];
 
@@ -534,9 +549,9 @@ int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer)
 
 				MakeLONGLONGNumber(&(((unsigned char*)Buffer)[6 + Offset]), &U_LL, 3);
 
-				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.Reserved = (S & 0xc00000) >> 22;
+				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.Reserved = (U_LL & 0xc00000) >> 22;
 
-				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.PiecewiseRate = (S & 0x3fffff);
+				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.PiecewiseRate = (U_LL & 0x3fffff);
 
 				Offset += 3;
 			}
@@ -548,9 +563,9 @@ int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer)
 
 				MakeLONGLONGNumber(&(((unsigned char*)Buffer)[6 + Offset]), &U_LL, 5);
 
-				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.SpliceType = (S & 0xf000000000) >> 36;
+				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.SpliceType = (U_LL & 0xf000000000) >> 36;
 
-				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.DTS_NextAccess = (S & 0x0efffefffe);
+				mpg2TS->AdaptationField.OptionalF.AdaptExt.OptionalFields.DTS_NextAccess = (U_LL & 0xfffffffff);
 
 				Offset += 5;
 			}
@@ -561,29 +576,78 @@ int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer)
 	}
 
 	if (mpg2TS->Adaptation_Field_Control == 0x01)
-		mpg2TS->Payload = ((unsigned char*)Buffer) + 4;
+	{
+		//mpg2TS->Payload = ((unsigned char*)Buffer) + 4;
+		memcpy(mpg2TS->Payload, ((unsigned char*)Buffer) + 4, 184);
+		mpg2TS->PayloadLength = 184;
+	}
 	else if (mpg2TS->Adaptation_Field_Control == 0x03)
-		mpg2TS->Payload = ((unsigned char*)Buffer) + 4 + mpg2TS->AdaptationField.Length;
-	else
-		mpg2TS->Payload = NULL;
+	{
+		//mpg2TS->Payload = ((unsigned char*)Buffer) + 5 + mpg2TS->AdaptationField.Length;  // +5 (4 bytes MPEG2_TS Header + 1 byte adaptation field lenth )
+		memcpy(mpg2TS->Payload, ((unsigned char*)Buffer) + 5 + mpg2TS->AdaptationField.Length, 183 - mpg2TS->AdaptationField.Length);
+		mpg2TS->PayloadLength = 183 - mpg2TS->AdaptationField.Length;
+	}
+//	else
+//		mpg2TS->Payload = NULL;
 
 	return 0;
 }
 
-int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
+int ReleaseAVTP_StreamHeader(AVTP_StreamHead* AVTP_SH)
+{
+	int i;
+
+	if (AVTP_SH == NULL)
+		return 1;
+
+	if (AVTP_SH->SubType == 0)
+	{
+		if (AVTP_SH->CIP_H.FMT == 0x20)
+		{
+			if (AVTP_SH->isData == TRUE)
+			{
+				if (AVTP_SH->MPEG2_Count > 0 && AVTP_SH->Data.MPEG2 != NULL)
+				{
+					for (i = 0; i < AVTP_SH->MPEG2_Count; i++)
+					{
+						if (AVTP_SH->Data.MPEG2[i].CIP_Count > 0 && AVTP_SH->Data.MPEG2[i].CIPp != NULL)
+							delete(AVTP_SH->Data.MPEG2[i].CIPp);
+
+						if (AVTP_SH->Data.MPEG2[i].sph != NULL)
+							delete(AVTP_SH->Data.MPEG2[i].sph);
+					}
+
+					delete AVTP_SH->Data.MPEG2;
+					AVTP_SH->MPEG2_Count = 0;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH, int BufferSize)
 {
 	unsigned long W;
 	unsigned short S;
 	int DataOffset, MinStreamSize;
 	unsigned char FDF;
 	EVTNSFC evt_n_sfc;
+	int mpegCount;
+	int i;
+	unsigned char BufferEx[188];	//Use when is more CIP Headers to join  data block in one packet
+	int OffsetEx, Length;
 
 	if (Frame == NULL || AVTP_SH == NULL) return 1;
 
 	DataOffset = 0;
 	MinStreamSize = 4;
+	mpegCount = 0;
 
 	memset(AVTP_SH, 0, sizeof(AVTP_StreamHead));
+
+	if (BufferSize < 24) return 3;
 
 	MakeLONGNumber(Frame, &W);
 
@@ -633,10 +697,14 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
 		{
 			MinStreamSize = 8;
 
+			if (BufferSize < 32) return 3;
+
 			MakeAVTP_CIP_SPH_Header(&(((unsigned char*)Frame)[24]), &AVTP_SH->CIP_H, &AVTP_SH->sph);
 
 			if (AVTP_SH->CIP_H.SPH == 1)
 			{
+				if (BufferSize < 36) return 3;
+
 				MinStreamSize = 12;
 
 				DataOffset = 4;
@@ -644,6 +712,8 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
 		}
 
 		MakeShortNumber(&AVTP_SH->Packet_H.StreamDataSize, &S);
+
+		if (BufferSize < 24 + S) return 3;
 
 		if (S > MinStreamSize)
 		{
@@ -696,12 +766,115 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH)
 
 					AVTP_SH->isData = TRUE;
 				}
-				else if (AVTP_SH->CIP_H.FMT == 0x40 && S > MinStreamSize + 4)					//61883-4 MPEG2_TS Data Block
+				else if (AVTP_SH->CIP_H.FMT == 0x20 && S > MinStreamSize + 4)					//61883-4 MPEG2_TS Data Block
 				{
+					if (AVTP_SH->CIP_H.DBC == 0) return 0;
 
-					MakeAVTP_MPEG2_tsHeader(&AVTP_SH->Data.MPEG2, &(((unsigned char*)Frame)[32 + DataOffset]));
+					if (AVTP_SH->CIP_H.DBC > 0 && AVTP_SH->CIP_H.DBC <= 8)
+					{
+						if (8 % AVTP_SH->CIP_H.DBC == 0)
+						{
+							AVTP_SH->Data.MPEG2 = (MPEG_2TS*)malloc(sizeof(MPEG_2TS));
 
-					AVTP_SH->isData = TRUE;
+							memset(AVTP_SH->Data.MPEG2, 0, sizeof(MPEG_2TS));
+
+							AVTP_SH->Data.MPEG2->CIP_Count = (8 / AVTP_SH->CIP_H.DBC)-1;
+
+							if (AVTP_SH->Data.MPEG2->CIP_Count == 0)
+							{
+								if(MakeAVTP_MPEG2_tsHeader(AVTP_SH->Data.MPEG2, &(((unsigned char*)Frame)[32 + DataOffset])) == 0);
+								{
+
+									AVTP_SH->MPEG2_Count = 1;
+
+									AVTP_SH->isData = TRUE;
+								}
+							}
+							else
+							{
+								OffsetEx = 0;
+								DataOffset += 32;
+
+								memset(BufferEx, 0, 188);
+								
+								AVTP_SH->Data.MPEG2->CIPp = (PCIP)malloc(sizeof(CIP) * AVTP_SH->Data.MPEG2->CIP_Count);
+
+								for (i = 0; i <= AVTP_SH->Data.MPEG2->CIP_Count; i++)
+								{
+									if (i == 0 && AVTP_SH->CIP_H.SPH == 1)
+										Length = 20 + (24 * (AVTP_SH->CIP_H.DBC - 1));
+									else
+										Length = 24 * AVTP_SH->CIP_H.DBC;
+										
+							
+									memcpy(&BufferEx[OffsetEx], &((unsigned char*)Frame)[DataOffset], Length);
+									
+									if (i != AVTP_SH->Data.MPEG2->CIP_Count)
+									{
+										OffsetEx += Length;
+										DataOffset += Length;
+
+										MakeAVTP_CIP_SPH_Header(&((unsigned char*)Frame)[DataOffset], &AVTP_SH->Data.MPEG2->CIPp[i].CIP_H, &AVTP_SH->Data.MPEG2->CIPp[i].sph);
+
+										DataOffset += 8;
+
+										if (AVTP_SH->Data.MPEG2->CIPp[i].CIP_H.SPH == 1)
+											DataOffset += 4;
+									}
+								}
+
+								if (MakeAVTP_MPEG2_tsHeader(AVTP_SH->Data.MPEG2, BufferEx) == 0);
+								{
+
+									AVTP_SH->MPEG2_Count = 1;
+
+									AVTP_SH->isData = TRUE;
+								}
+
+							}
+
+						}
+						else return 2;
+					}
+					else
+					{
+						if (AVTP_SH->CIP_H.DBC % 8 == 0)
+						{
+							mpegCount = AVTP_SH->CIP_H.DBC / 8;
+							
+							if (mpegCount > 0)
+							{
+								AVTP_SH->Data.MPEG2 = (MPEG_2TS*)malloc(sizeof(MPEG_2TS) * mpegCount);
+
+								AVTP_SH->MPEG2_Count = mpegCount;
+
+								memset(AVTP_SH->Data.MPEG2, 0, sizeof(MPEG_2TS)* mpegCount);
+
+								DataOffset += 32;
+
+								for (i = 0; i < mpegCount; i++)
+								{
+									MakeAVTP_MPEG2_tsHeader(&AVTP_SH->Data.MPEG2[i], &(((unsigned char*)Frame)[DataOffset]));
+
+									DataOffset += 188;
+
+									if (i != mpegCount - 1)
+									{
+										AVTP_SH->Data.MPEG2[i].sph = (SPH*) malloc(mpegCount * sizeof(SPH));
+
+										MakeAVTP_CIP_SPH_Header(&(((unsigned char*)Frame)[DataOffset]), NULL, AVTP_SH->Data.MPEG2[i].sph);
+
+										DataOffset += 4;
+									}
+								}
+
+								AVTP_SH->isData = TRUE;
+							}
+
+						}
+						else return 2;
+					}
+
 				}
 			}
 			else
@@ -889,7 +1062,7 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 			if (avtp->CIP_H.SPH == 1)
 				sVal -= 4;
 			
-			if (avtp->CIP_H.FMT == 0x10 && sVal>4)
+			if (avtp->CIP_H.FMT == 0x10 && sVal > 4)
 			{
 				FDF = ((unsigned char*)&avtp->CIP_H.FDF)[0];
 

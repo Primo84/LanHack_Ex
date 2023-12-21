@@ -700,6 +700,13 @@ typedef struct Packet_61883_Header
 
 }Packet_61883_H;
 
+typedef struct SourcePacketHeader
+{
+	unsigned char Reserved : 7;
+	unsigned short SPH_Cycle : 13;
+	unsigned short SPH_CycleOffset : 12;
+}SPH;
+
 typedef struct CIP_61883_Header
 {
 	unsigned char Prefiks1 : 2;
@@ -746,8 +753,20 @@ typedef struct Video_Data_61883_8			//Data Video Payload for Vidoe 61883_8 packe
 
 }VideoData_8;
 
+typedef struct _CIP
+{
+	CIP_61883_H CIP_H;					// Use when AVTP_CIP_H->DBC is 1,2,4 (MPEG stream is divided on DataBlocks and is many CIP Headers)
+	SPH sph;
+
+}CIP, *PCIP;
+
 typedef struct MPEG_2_TransportStream			//61883-4 standard
 {
+	PCIP CIPp;
+	int CIP_Count;
+
+	SPH *sph;
+
 	unsigned char Sync_Byte;
 	unsigned char Transport_Error_Indicator : 1;
 	unsigned char Payload_Start_Indicator : 1;	//PSI or PES packet
@@ -809,16 +828,11 @@ typedef struct MPEG_2_TransportStream			//61883-4 standard
 
 	}AdaptationField;
 
-	unsigned char *Payload;
+	unsigned char Payload[184];
+	int PayloadLength;
 
 }MPEG_2TS;
 
-typedef struct SourcePacketHeader
-{
-	unsigned char Reserved : 7;
-	unsigned short SPH_Cycle : 13;
-	unsigned short SPH_CycleOffset : 12;
-}SPH;
 
 typedef struct AVTP_Strem_Header			//cd=0
 {
@@ -840,19 +854,22 @@ typedef struct AVTP_Strem_Header			//cd=0
 	CIP_61883_H CIP_H;
 	SPH sph;							//if CIP_H.SPH is 1 sph is present 
 	BOOLEAN isData;
+
 	union Data_
 	{
 		unsigned char *Buffer;
 
-		AudioSample_6 *As;				//61883-6
+		AudioSample_6 *As;				//61883-6	Audio
 
-		Audio24Bit* ABit24;				//61883-6
+		Audio24Bit *ABit24;				//61883-6	Audio
 
-		MPEG_2TS MPEG2;					//61883-4
+		MPEG_2TS *MPEG2;				//61883-4	MPEG2_TS
 
-		VideoData_8 VD;
+		VideoData_8 VD;					//61883-8 Video
 
 	}Data;
+
+	int MPEG2_Count;
 
 }AVTP_StreamHead;
 
@@ -1110,7 +1127,9 @@ int ConvertMAAPControlHeadertoBuffer(MAAP_Prot* avtp, PVOID Buffer);					//Write
 
 int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer);
 
-int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH);
+int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH, int BufferSize);
+
+int ReleaseAVTP_StreamHeader(AVTP_StreamHead* AVTP_SH);
 
 int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer);
 
