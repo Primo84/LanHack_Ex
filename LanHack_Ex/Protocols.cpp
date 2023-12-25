@@ -507,10 +507,16 @@ int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer)
 
 		if (mpg2TS->AdaptationField.Various_Fl.TransportPrivateData_Flag == 1)
 		{
-			mpg2TS->AdaptationField.OptionalF.TransportPrivateDataLenght = ((unsigned char*)Buffer)[6 + Offset];
-			mpg2TS->AdaptationField.OptionalF.TransportPrivData = &((unsigned char*)Buffer)[7 + Offset];
+			mpg2TS->AdaptationField.OptionalF.TransportPrivateDataLength = ((unsigned char*)Buffer)[6 + Offset];
 
-			Offset += mpg2TS->AdaptationField.OptionalF.TransportPrivateDataLenght + 1;
+			if (mpg2TS->AdaptationField.OptionalF.TransportPrivateDataLength > 0)
+			{
+				mpg2TS->AdaptationField.OptionalF.TransportPrivData = (unsigned char*)malloc(mpg2TS->AdaptationField.OptionalF.TransportPrivateDataLength);
+
+				memcpy(mpg2TS->AdaptationField.OptionalF.TransportPrivData, &((unsigned char*)Buffer)[7 + Offset], mpg2TS->AdaptationField.OptionalF.TransportPrivateDataLength);
+
+				Offset += mpg2TS->AdaptationField.OptionalF.TransportPrivateDataLength + 1;
+			}
 		}
 
 		if (mpg2TS->AdaptationField.Various_Fl.AdaptationFieldExtension_Flag == 1)
@@ -571,7 +577,8 @@ int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer)
 			}
 		}
 
-		mpg2TS->AdaptationField.OptionalF.StuffingBytes = &(((unsigned char*)Buffer)[6 + Offset]);
+		mpg2TS->AdaptationField.OptionalF.StuffingBytes = (unsigned char *)malloc(sizeof(unsigned char));
+		*mpg2TS->AdaptationField.OptionalF.StuffingBytes = ((unsigned char*)Buffer)[6 + Offset];
 
 	}
 
@@ -615,6 +622,12 @@ int ReleaseAVTP_StreamHeader(AVTP_StreamHead* AVTP_SH)
 
 						if (AVTP_SH->Data.MPEG2[i].sph != NULL)
 							delete(AVTP_SH->Data.MPEG2[i].sph);
+
+						if (AVTP_SH->Data.MPEG2[i].AdaptationField.OptionalF.TransportPrivData != NULL)
+							delete(AVTP_SH->Data.MPEG2[i].AdaptationField.OptionalF.TransportPrivData);
+
+						if (AVTP_SH->Data.MPEG2[i].AdaptationField.OptionalF.StuffingBytes != NULL)
+							delete(AVTP_SH->Data.MPEG2[i].AdaptationField.OptionalF.StuffingBytes);
 					}
 
 					delete AVTP_SH->Data.MPEG2;
@@ -854,18 +867,19 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH, int BufferSize)
 
 								for (i = 0; i < mpegCount; i++)
 								{
-									MakeAVTP_MPEG2_tsHeader(&AVTP_SH->Data.MPEG2[i], &(((unsigned char*)Frame)[DataOffset]));
-
-									DataOffset += 188;
-
-									if (i != mpegCount - 1)
+									if (i > 0)
 									{
-										AVTP_SH->Data.MPEG2[i].sph = (SPH*) malloc(mpegCount * sizeof(SPH));
+										AVTP_SH->Data.MPEG2[i].sph = (SPH*)malloc(mpegCount * sizeof(SPH));
 
 										MakeAVTP_CIP_SPH_Header(&(((unsigned char*)Frame)[DataOffset]), NULL, AVTP_SH->Data.MPEG2[i].sph);
 
 										DataOffset += 4;
 									}
+
+									MakeAVTP_MPEG2_tsHeader(&AVTP_SH->Data.MPEG2[i], &(((unsigned char*)Frame)[DataOffset]));
+
+									DataOffset += 188;
+
 								}
 
 								AVTP_SH->isData = TRUE;
@@ -888,7 +902,7 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH, int BufferSize)
 	return 0;
 }
 
-int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
+int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer, int *BufferSize)
 {
 	unsigned long Val;
 	int i, j, i1;
@@ -896,14 +910,24 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 	int DataOffset;
 	EVTNSFC evt_n_sfc;
 	unsigned char FDF;
+	UINT64 Val64;
+	unsigned char *BufferEx;
+	int BufferOffset;
+	int Length;
 
-	if (avtp == NULL || Buffer == NULL) return 1;
+	if (avtp == NULL || Buffer == NULL || BufferSize == NULL) return 1;
 
 	Val = 0;
 
 	i1 = 0;
 
 	DataOffset = 24;
+	BufferOffset = 0;
+
+
+	BufferEx = NULL;
+
+	if (*BufferSize < 24) return 2;
 
 	if (avtp->CD == 1)
 		Val = Val | 0x80000000;
@@ -919,13 +943,13 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 		Val = Val | (((unsigned long)avtp->mr) << 19);
 
 	if (avtp->r)
-		Val = Val | (((unsigned long)avtp->mr) << 18);
+		Val = Val | (((unsigned long)avtp->r) << 18);
 
 	if (avtp->gv)
-		Val = Val | (((unsigned long)avtp->mr) << 17);
+		Val = Val | (((unsigned long)avtp->gv) << 17);
 
 	if (avtp->tv)
-		Val = Val | (((unsigned long)avtp->mr) << 16);
+		Val = Val | (((unsigned long)avtp->tv) << 16);
 
 	Val = Val | (((unsigned long)avtp->SequenceNumber) << 8);
 
@@ -955,6 +979,8 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 
 	if (avtp->Packet_H.Tag == 1)
 	{
+		if (*BufferSize < 32) return 2;
+
 		DataOffset = 32;
 
 		Val = Val | (avtp->CIP_H.Prefiks1 << 14);
@@ -1011,6 +1037,8 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 		}
 		else
 		{
+			if (*BufferSize < 36) return 2;
+
 			j = 4;
 
 			for (i = 26; i <= 28; i++)
@@ -1053,6 +1081,8 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 */
 	MakeShortNumber(avtp->Packet_H.StreamDataSize, &sVal);
 
+	if (*BufferSize < sVal + 24) return 2;
+
 	if (sVal > 0 && avtp->isData==TRUE)
 	{
 		if(avtp->Packet_H.Tag==1)
@@ -1080,6 +1110,8 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 						{
 							memcpy(&((unsigned char*)Buffer)[DataOffset], avtp->Data.ABit24, sVal);
 						}
+
+						*BufferSize = DataOffset + sVal;
 					}
 				}
 			}
@@ -1112,6 +1144,353 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer)
 				}
 
 				memcpy(&((unsigned char*)Buffer)[DataOffset + 4], avtp->Data.VD.VideoBytes, sVal - 4);
+
+				*BufferSize = DataOffset + sVal;
+			}
+			else if (avtp->CIP_H.FMT == 0x20 && sVal >= 188)
+			{
+				if (avtp->Data.MPEG2 != NULL && avtp->MPEG2_Count > 0)
+				{
+					if (avtp->CIP_H.DBS != 6)
+						return 2;
+
+					if (avtp->CIP_H.DBC > 0 && avtp->CIP_H.DBC <= 8)
+					{
+						if (8 % avtp->CIP_H.DBC != 0)
+							return 2;
+
+						if (8 / avtp->CIP_H.DBC != avtp->Data.MPEG2->CIP_Count + 1)
+							return 2;
+					}
+					else
+					{
+						if (avtp->CIP_H.DBC % 8 != 0)
+							return 2;
+
+						if (avtp->CIP_H.DBC / 8 != avtp->MPEG2_Count)
+							return 2;
+					}
+
+					if (sVal >= (avtp->MPEG2_Count * 192) - 4)
+					{
+						if (avtp->MPEG2_Count > 1)
+						{
+							BufferOffset = (188 + (192 * (avtp->MPEG2_Count - 1)));
+						}
+						else
+						{
+							BufferOffset = 188 + (8 * avtp->Data.MPEG2->CIP_Count);
+
+							for (i1 = 0; i1 < avtp->Data.MPEG2->CIP_Count; i1++)
+							{
+								if (avtp->Data.MPEG2->CIPp[i1].CIP_H.SPH == 1)
+									BufferOffset += 4;
+							}
+						}
+
+						BufferEx = (unsigned char*)malloc(BufferOffset);
+
+						BufferOffset = 0;
+
+						for (i1 = 0; i1 < avtp->MPEG2_Count; i1++)
+						{
+							if (i1 > 0)
+							{
+								if (avtp->Data.MPEG2[i1].sph != NULL)
+								{
+									Val = 0;
+
+									Val = (avtp->Data.MPEG2[i1].sph->Reserved << 25);
+
+									Val = Val | (avtp->Data.MPEG2[i1].sph->SPH_Cycle << 12);
+
+									Val = Val | (avtp->Data.MPEG2[i1].sph->SPH_CycleOffset);
+
+									j = 4;
+
+									for (i = BufferOffset; i <= BufferOffset + 3; i++)
+									{
+										j--;
+										((unsigned char*)BufferEx)[i] = ((unsigned char*)&Val)[j];
+									}
+
+									BufferOffset += 4;
+								}
+							}
+
+							Val = 0;
+
+							Val = avtp->Data.MPEG2[i1].Sync_Byte << 24;
+
+							Val = Val | (avtp->Data.MPEG2[i1].Transport_Error_Indicator << 23);
+
+							Val = Val | (avtp->Data.MPEG2[i1].Payload_Start_Indicator << 22);
+
+							Val = Val | (avtp->Data.MPEG2[i1].Transport_Priority << 21);
+
+							Val = Val | (avtp->Data.MPEG2[i1].PID << 8);
+
+							Val = Val | (avtp->Data.MPEG2[i1].Transport_Scrambling_Control << 6);
+
+							Val = Val | (avtp->Data.MPEG2[i1].Adaptation_Field_Control << 4);
+
+							Val = Val | (avtp->Data.MPEG2[i1].Continuity_Counter);
+
+							j = 4;
+
+							for (i = BufferOffset; i <= BufferOffset + 3; i++)
+							{
+								j--;
+								((unsigned char*)BufferEx)[i] = ((unsigned char*)&Val)[j];
+							}
+
+							BufferOffset += 4;
+
+							if (avtp->Data.MPEG2[i1].Adaptation_Field_Control == 2 || avtp->Data.MPEG2[i1].Adaptation_Field_Control == 3)
+							{
+
+								Val = 0;
+
+								((unsigned char*)&Val)[1] = avtp->Data.MPEG2[i1].AdaptationField.Length;
+
+								Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.Discontinuity_Indicator << 7);
+								Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.Random_Access_Indicator << 6);
+								Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.ES_Priority_Indicator << 5);
+								Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.Various_Fl.PCR_Flag << 4);
+								Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.Various_Fl.OPCR_Flag << 3);
+								Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.Various_Fl.SplicingPoint_Flag << 2);
+								Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.Various_Fl.TransportPrivateData_Flag << 1);
+								Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.Various_Fl.AdaptationFieldExtension_Flag);
+
+								j = 2;
+
+								for (i = BufferOffset; i <= BufferOffset + 1; i++)
+								{
+									j--;
+									((unsigned char*)BufferEx)[i] = ((unsigned char*)&Val)[j];
+								}
+
+								BufferOffset += 2;
+
+								if (avtp->Data.MPEG2[i1].AdaptationField.Various_Fl.PCR_Flag == 1)
+								{
+									j = 6;
+									Val64 = avtp->Data.MPEG2[i1].AdaptationField.OptionalF.PCR;
+
+									for (i = BufferOffset; i <= BufferOffset + 5; i++)
+									{
+										j--;
+										((unsigned char*)BufferEx)[i] = ((unsigned char*)&Val64)[j];
+									}
+
+									BufferOffset += 6;
+								}
+
+								if (avtp->Data.MPEG2[i1].AdaptationField.Various_Fl.OPCR_Flag == 1)
+								{
+									j = 6;
+									Val64 = avtp->Data.MPEG2[i1].AdaptationField.OptionalF.OPCR;
+
+									for (i = BufferOffset; i <= BufferOffset + 5; i++)
+									{
+										j--;
+										((unsigned char*)BufferEx)[i] = ((unsigned char*)&Val64)[j];
+									}
+
+									BufferOffset += 6;
+								}
+
+								if (avtp->Data.MPEG2[i1].AdaptationField.Various_Fl.SplicingPoint_Flag == 1)
+								{
+									((unsigned char*)BufferEx)[BufferOffset] = avtp->Data.MPEG2[i1].AdaptationField.OptionalF.SpliceCountdown;
+
+									BufferOffset++;
+								}
+
+								if (avtp->Data.MPEG2[i1].AdaptationField.Various_Fl.TransportPrivateData_Flag == 1)
+								{
+									((unsigned char*)BufferEx)[BufferOffset] = avtp->Data.MPEG2[i1].AdaptationField.OptionalF.TransportPrivateDataLength;
+
+									BufferOffset++;
+
+									memcpy(&((unsigned char*)BufferEx)[BufferOffset], avtp->Data.MPEG2[i1].AdaptationField.OptionalF.TransportPrivData, avtp->Data.MPEG2[i1].AdaptationField.OptionalF.TransportPrivateDataLength);
+
+									BufferOffset += avtp->Data.MPEG2[i1].AdaptationField.OptionalF.TransportPrivateDataLength;
+
+								}
+
+								if (avtp->Data.MPEG2[i1].AdaptationField.Various_Fl.AdaptationFieldExtension_Flag == 1)
+								{
+									Val = 0;
+
+									((unsigned char*)&Val)[1] = avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.AdaptationExtLength;
+
+									Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.LegalTimeWindowFl << 7);
+									Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.PiecewiseRateFl << 6);
+									Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.SeamlessSpliceFl << 5);
+									Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.Reserved);
+
+									j = 2;
+
+									for (i = BufferOffset; i <= BufferOffset + 1; i++)
+									{
+										j--;
+										((unsigned char*)BufferEx)[i] = ((unsigned char*)&Val)[j];
+									}
+
+									BufferOffset += 2;
+
+									if (avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.LegalTimeWindowFl == 1)
+									{
+										Val = 0;
+
+										Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.OptionalFields.LTW_ValidFl << 15);
+
+										Val = Val | avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.OptionalFields.LTW_Offset; 
+
+										j = 2;
+
+										for (i = BufferOffset; i <= BufferOffset + 1; i++)
+										{
+											j--;
+											((unsigned char*)BufferEx)[i] = ((unsigned char*)&Val)[j];
+										}
+
+										BufferOffset += 2;
+									}
+
+									if (avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.PiecewiseRateFl == 1)
+									{
+										Val = 0;
+
+										Val = Val | (avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.OptionalFields.Reserved << 22);
+
+										Val = Val | avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.OptionalFields.PiecewiseRate;
+
+										j = 3;
+
+										for (i = BufferOffset; i <= BufferOffset + 2; i++)
+										{
+											j--;
+											((unsigned char*)BufferEx)[i] = ((unsigned char*)&Val)[j];
+										}
+
+										BufferOffset += 3;
+									}
+
+									if (avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.SeamlessSpliceFl == 1)
+									{
+										Val64 = 0;
+
+										Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.OptionalFields.SpliceType) << 36);
+
+										Val64 = Val64 | avtp->Data.MPEG2[i1].AdaptationField.OptionalF.AdaptExt.OptionalFields.DTS_NextAccess;
+
+										j = 5;
+
+										for (i = BufferOffset; i <= BufferOffset + 4; i++)
+										{
+											j--;
+											((unsigned char*)BufferEx)[i] = ((unsigned char*)&Val64)[j];
+										}
+
+										BufferOffset += 5;
+									}
+
+									((unsigned char*)BufferEx)[BufferOffset] = *avtp->Data.MPEG2->AdaptationField.OptionalF.StuffingBytes;
+
+									BufferOffset++;
+								}
+							}
+
+							if (avtp->Data.MPEG2[i1].Adaptation_Field_Control == 1 || avtp->Data.MPEG2[i1].Adaptation_Field_Control == 3)
+							{
+								memcpy(&((unsigned char*)BufferEx)[BufferOffset], avtp->Data.MPEG2[i1].Payload, avtp->Data.MPEG2[i1].PayloadLength);
+								BufferOffset += avtp->Data.MPEG2->PayloadLength;
+							}
+
+						} 
+
+						if (avtp->MPEG2_Count >= 2 || avtp->CIP_H.DBC == 8)
+						{
+							memcpy(&((unsigned char*)Buffer)[DataOffset], BufferEx, BufferOffset);
+							*BufferSize = DataOffset + BufferOffset;
+						}
+
+						else
+						{
+							BufferOffset = 0;
+
+							for (i = 0; i <= avtp->Data.MPEG2->CIP_Count; i++)
+							{
+								if (i > 0 && avtp->Data.MPEG2->CIPp != NULL && avtp->Data.MPEG2->CIP_Count >= i)
+								{
+									Val64 = 0;
+
+									Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2->CIPp[i-1].CIP_H.Prefiks1) << 62);
+									Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2->CIPp[i-1].CIP_H.SID) << 56);
+									Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2->CIPp[i-1].CIP_H.DBS) << 48);
+									Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2->CIPp[i-1].CIP_H.FN) << 46);
+									Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2->CIPp[i-1].CIP_H.QPC) << 43);
+									Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2->CIPp[i-1].CIP_H.SPH) << 42);
+									Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2->CIPp[i-1].CIP_H.Rsv) << 40);
+									Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2->CIPp[i-1].CIP_H.DBC) << 32);
+									Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2->CIPp[i-1].CIP_H.Prefiks2) << 30);
+									Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2->CIPp[i-1].CIP_H.FMT) << 24);
+									Val64 = Val64 | (((unsigned long long)avtp->Data.MPEG2->CIPp[i-1].CIP_H.FDF) << 16);
+									MakeShortNumber(avtp->Data.MPEG2->CIPp[i-1].CIP_H.SYT, &sVal);
+									Val64 = Val64 | sVal;
+
+									j = 8;
+
+									for (i1 = DataOffset; i1 <= DataOffset + 7; i1++)
+									{
+										j--;
+										((unsigned char*)Buffer)[i1] = ((unsigned char*)&Val64)[j];
+									}
+
+									DataOffset += 8;
+
+									if (avtp->Data.MPEG2->CIPp[i-1].CIP_H.SPH == 1)
+									{
+										Val = 0;
+
+										Val = Val | (avtp->Data.MPEG2->CIPp[i-1].sph.Reserved << 25);
+										Val = Val | (avtp->Data.MPEG2->CIPp[i-1].sph.SPH_Cycle << 12);
+										Val = Val | avtp->Data.MPEG2->CIPp[i-1].sph.SPH_CycleOffset;
+
+										j = 4;
+
+										for (i1 = DataOffset; i1 <= DataOffset + 3; i1++)
+										{
+											j--;
+											((unsigned char*)Buffer)[i1] = ((unsigned char*)&Val)[j];
+										}
+
+										DataOffset += 4;
+									}
+
+								}
+
+								if (i == 0 && avtp->CIP_H.SPH == 1)
+									Length = 20 + (24 * (avtp->CIP_H.DBC - 1));
+								else
+									Length = 24 * avtp->CIP_H.DBC;
+
+								memcpy(&((unsigned char*)Buffer)[DataOffset], &BufferEx[BufferOffset], Length);
+
+								BufferOffset += Length;
+								DataOffset += Length;
+							}
+
+							*BufferSize = DataOffset;
+						}
+
+						if (BufferEx != NULL)
+							delete(BufferEx);
+
+					}
+				}
 			}
 		}
 		else if(avtp->Data.Buffer != NULL)

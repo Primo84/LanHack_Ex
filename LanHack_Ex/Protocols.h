@@ -798,8 +798,8 @@ typedef struct MPEG_2_TransportStream			//61883-4 standard
 			UINT64 PCR : 48;
 			UINT64 OPCR : 48;
 			unsigned char SpliceCountdown;
-			unsigned char TransportPrivateDataLenght;
-			unsigned char* TransportPrivData;
+			unsigned char TransportPrivateDataLength;
+			unsigned char *TransportPrivData;
 
 			struct Adaptation_Extension
 			{
@@ -822,7 +822,7 @@ typedef struct MPEG_2_TransportStream			//61883-4 standard
 
 			}AdaptExt;
 
-			unsigned char* StuffingBytes;
+			unsigned char *StuffingBytes;
 
 		}OptionalF;
 
@@ -1131,7 +1131,7 @@ int MakeAVTP_StreamHead(PVOID Frame, AVTP_StreamHead* AVTP_SH, int BufferSize);
 
 int ReleaseAVTP_StreamHeader(AVTP_StreamHead* AVTP_SH);
 
-int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer);
+int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer, int *BufferSize);
 
 
 /*
