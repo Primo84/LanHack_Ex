@@ -13,6 +13,8 @@
 
 using namespace std;
 
+int WriteFileProtData(fstream *pl, PVOID Buff, int length);
+
 int InitSaveEthData(HINSTANCE MInst, ProtocolSaveProc* PS, TableSaveProc * TSP);
 
 int SaveIPFrame(PVOID Frame, fstream* pl, unsigned short DataSize);

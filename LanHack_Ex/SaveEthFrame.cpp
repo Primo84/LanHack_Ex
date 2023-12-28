@@ -23,6 +23,76 @@ int InitSaveEthData(HINSTANCE MInst, ProtocolSaveProc* PS, TableSaveProc * TSP)
 	return 0;
 }
 
+
+int WriteFileProtData(fstream *pl, PVOID Buff, int length)
+{
+	unsigned char* bt;
+	char Text1[500];
+	char Text[500];
+	int rozm;
+	int licz, i;
+
+	if (pl == NULL || Buff == NULL || length <= 0)
+		return 1;
+
+	bt = (unsigned char*)Buff;
+	rozm = length;
+	licz = 0;
+
+	if (bt != NULL && rozm > 0)
+	
+
+	licz = 0;
+
+	memset(Text1, 0, 500);
+	memset(Text, 0, 500);
+
+	for (i = 0; i < rozm; i++)
+	{
+
+		if (bt[i] <= 32 || bt[i] > 127)
+			//	if ((bt[i] >= 0 && bt[i] <= 32) || (bt[i]==0xAD) || (bt[i]==0xA0))
+			sprintf(&Text[strlen(Text)], ".");
+		else
+			sprintf(&Text[strlen(Text)], "%c", bt[i]);
+
+		sprintf(&Text1[strlen(Text1)], "%0.2X ", bt[i]);
+
+		licz++;
+
+		if (licz == 20)
+		{
+			sprintf(&Text1[strlen(Text1)], "\n");
+			sprintf(&Text[strlen(Text)], "                    ");
+
+			pl->write(Text, strlen(Text));
+
+			pl->write(Text1, strlen(Text1));
+
+			memset(Text1, 0, 500);
+			memset(Text, 0, 500);
+
+			licz = 0;
+		}
+	}
+
+	if (licz > 0)
+	{
+		sprintf(&Text1[strlen(Text1)], "\n");
+		sprintf(&Text[strlen(Text)], "                    ");
+
+		for (i = licz; i < 20; i++)
+			sprintf(&Text[strlen(Text)], " ");
+
+		pl->write(Text, strlen(Text));
+
+		pl->write(Text1, strlen(Text1));
+	}
+	
+
+	return 0;
+}
+
 /*******************************************************************************************************
 *******************************************************************************************************
 
@@ -250,7 +320,6 @@ int SaveLLC(PVOID Frame, fstream* pl, unsigned short DataSize)
 	char Text[1000];
 	char PortRole[4][80] = { "0 - Unused\0","01 - Port Role Alternate/Backup in RST/MST/SPT BPDU0\0",\
 							"10 - Port Role Root in RST/MST/SPT BPDU\0","11 - Port Role Designated in RST/MST/SPT BPDU\0" };
-
 	BS = (BridgeSpan*)Frame;
 
 	MakeBridgeFlags(BS->Flags, &BF);
@@ -350,7 +419,7 @@ int SaveIEE802_1qTagFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	MakeShortNumber((unsigned short*)bt, &EType);
 
-	sprintf(Text, "------------802_1Q_Tagged Frame Header------------\n\n");
+	sprintf(Text, "---------------------------------------------802_1Q_Tagged Frame Header---------------------------------------------\n\n");
 
 	sprintf(&Text[strlen(Text)], " Priority : %d  Canonical Format Mac (0-Canonical Format | 1-Non Cannonical Format) : %d  VLAN Identifier : %0.2X\n\n", tci.PCP, tci.DEI, tci.VID);
 
@@ -378,7 +447,7 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 {
 	char Text[5000];
 	char Text1[500];
-	int licz, rozm, i;
+	int licz, rozm, i,j;
 	char LNumberText[100];
 	unsigned char* bt;
 	AVTP_ControlHead AVTP_CH;
@@ -386,11 +455,16 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 	MAAP_Prot* MAAP;
 	unsigned short Number, StreamSize;
 	char Message_Type[7][25] = { "Reserved\0", "MAAP_PROBE\0", "MAAP_DEFEND\0", "MAAP_ANNOUNCE\0", "MAAP_RELEASE\0", "MAAP_ASSIGN\0", "MAAP_UNASSIGN\0" };
+	char TSC[4][80] = { "Not Scrambled\0","Reserved\0","Scrambled with even key\0","Scrambled with odd key\0" };
+	char AFC[4][80] = { "Reserved\0","Only Payload\0","Only Adaptation\0","Payload and Adaptation\0" };
 	char Type61883[50];
 	unsigned short ReqCount, ConflictCount;
 	unsigned long LNumb;
 	EVTNSFC evt_n_sfc;
 	unsigned char FDF;
+	UINT64 N_64;
+	BOOL is_Tab;
+
 
 
 	if (DataSize <= 0) return 0;
@@ -402,7 +476,9 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	if (DataSize >= 12)
 	{
-		MakeAVTP_ControlHead(Frame, &AVTP_CH);
+		 i = MakeAVTP_ControlHead(Frame, &AVTP_CH);
+
+		 if (i != 0) return i;
 
 		switch (AVTP_CH.SubType)
 		{
@@ -442,7 +518,7 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 		if (((((unsigned char*)Frame)[0]) >> 7) == 1) // AVTP Control Packet Header
 		{
 
-			sprintf(Text, "------------AVTP Control Packet Header------------\n\n");
+			sprintf(Text, "---------------------------------------------AVTP Control Packet Header---------------------------------------------\n\n");
 
 			sprintf(&Text[strlen(Text)], "\n\nVersion : 0x%0.2X  Control Data : 0x%0.2X  Status : 0x%0.2X  Payload Size : %d Bytes\n\n", AVTP_CH.Version, AVTP_CH.Control_Data, AVTP_CH.Status, AVTP_CH.ControlDataSize);
 
@@ -483,11 +559,13 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 		}
 		else // AVTP Stream Vidoe or Audio Packet  
 		{
-			MakeAVTP_StreamHead(Frame, &AVTP_SH, DataSize);
+			i = MakeAVTP_StreamHead(Frame, &AVTP_SH, DataSize);
 
-			sprintf(Text, "------------AVTP Stream Packet Header------------\n\n");
+			if (i != 0) return i;
 
-			if (AVTP_CH.SubType == 0x00)		//IEC 61883/IIDC over AVTP	
+			sprintf(Text, "---------------------------------------------AVTP Stream Packet Header---------------------------------------------\n\n");
+
+			if (AVTP_SH.SubType == 0x00 && AVTP_SH.Packet_H.Tag == 1)		//IEC 61883/IIDC over AVTP	
 			{
 				sprintf(&Text[strlen(Text)], "Version : 0x%0.2X  Media Clock Restart(mr) : %d  Reserved : %d  Gateway_info field valid : %d  Timestamp valid : %d\n\n",AVTP_SH.Version,\
 												AVTP_SH.mr, AVTP_SH.Reserved, AVTP_SH.gv, AVTP_SH.tv);
@@ -531,7 +609,7 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 				sprintf(&Text[strlen(Text)], "Stream Data Size : %d     Tag : %d     Channel : %d     TCode: 0x%0.2X     SY : %d\n\n", StreamSize, AVTP_SH.Packet_H.Tag, AVTP_SH.Packet_H.Channel,\
 													AVTP_SH.Packet_H.TCode, AVTP_SH.Packet_H.SY);
 
-				sprintf(&Text[strlen(Text)], "SID : %d     DBS : %d     FN : %d     QPC : %d     SPH : %d     Rsv : %d\n\n", AVTP_SH.CIP_H.SID, AVTP_SH.CIP_H.DBS, AVTP_SH.CIP_H.FN,\
+				sprintf(&Text[strlen(Text)], "----------CIP Header 0----------\n\nSID : %d     DBS : %d     FN : %d     QPC : %d     SPH : %d     Rsv : %d\n\n", AVTP_SH.CIP_H.SID, AVTP_SH.CIP_H.DBS, AVTP_SH.CIP_H.FN,\
 														AVTP_SH.CIP_H.QPC, AVTP_SH.CIP_H.SPH, AVTP_SH.CIP_H.Rsv);
 				
 
@@ -545,8 +623,17 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 					memset(LNumberText, 0, 100);
 					_ultoa(Number, LNumberText, 10);
 
-					sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d     SYT : 0x%0.2X(%s)\n\n", AVTP_SH.CIP_H.DBC, Type61883, AVTP_SH.CIP_H.FDF, \
-						Number, LNumberText);
+					if (AVTP_SH.CIP_H.SPH == 0)
+						sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d     SYT : 0x%0.2X(%s)\n\n", AVTP_SH.CIP_H.DBC, Type61883, AVTP_SH.CIP_H.FDF, \
+							Number, LNumberText);
+					else
+					{
+						sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d\n\n", AVTP_SH.CIP_H.DBC, Type61883, AVTP_SH.CIP_H.FDF);
+						
+						sprintf(&Text[strlen(Text)], "----------Source Packet Header 0----------\n\nReserved : %d (0x%.2X)     SPH_Cycle : %d (0x%0.2X)     SPH Cycle Offset : %d (0x%0.2X)\n\n", \
+							AVTP_SH.sph.Reserved, AVTP_SH.sph.Reserved, AVTP_SH.sph.SPH_Cycle, AVTP_SH.sph.SPH_Cycle, \
+							AVTP_SH.sph.SPH_CycleOffset, AVTP_SH.sph.SPH_CycleOffset);
+					}
 
 					if (AVTP_SH.isData == 1)
 					{
@@ -569,8 +656,17 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 					memset(LNumberText, 0, 100);
 					_ultoa(Number, LNumberText, 10);
 
-					sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d     SYT : 0x%0.2X(%s)\n\n", AVTP_SH.CIP_H.DBC, Type61883, AVTP_SH.CIP_H.FDF, \
-						Number, LNumberText);
+					if (AVTP_SH.CIP_H.SPH == 0)
+						sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d     SYT : 0x%0.2X(%s)\n\n", AVTP_SH.CIP_H.DBC, Type61883, AVTP_SH.CIP_H.FDF, \
+							Number, LNumberText);
+					else
+					{
+						sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d\n\n", AVTP_SH.CIP_H.DBC, Type61883, AVTP_SH.CIP_H.FDF);
+						
+						sprintf(&Text[strlen(Text)], "----------Source Packet Header 0----------\n\nReserved : %d (0x%.2X)     SPH_Cycle : %d (0x%0.2X)     SPH Cycle Offset : %d (0x%0.2X)\n\n", \
+							AVTP_SH.sph.Reserved, AVTP_SH.sph.Reserved, AVTP_SH.sph.SPH_Cycle, AVTP_SH.sph.SPH_Cycle, \
+							AVTP_SH.sph.SPH_CycleOffset, AVTP_SH.sph.SPH_CycleOffset);
+					}
 
 					if (AVTP_SH.isData == 1)
 					{
@@ -593,7 +689,263 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 					}
 
 				}
+				else if (AVTP_SH.CIP_H.FMT == 0x20)
+				{
+					strcpy(Type61883, "61883-4 MPEG-2 Transport Stream");
 
+					MakeShortNumber(AVTP_SH.CIP_H.SYT, &Number);
+					memset(LNumberText, 0, 100);
+					_ultoa(Number, LNumberText, 10);
+
+					if(AVTP_SH.CIP_H.SPH==0)
+						sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d     SYT : 0x%0.2X(%s)\n\n", AVTP_SH.CIP_H.DBC, Type61883, AVTP_SH.CIP_H.FDF, \
+							Number, LNumberText);
+					else
+					{
+						sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d\n\n", AVTP_SH.CIP_H.DBC, Type61883, AVTP_SH.CIP_H.FDF);
+						
+						sprintf(&Text[strlen(Text)], "----------Source Packet Header 0----------\n\nReserved : %d (0x%.2X)     SPH_Cycle : %d (0x%0.2X)     SPH Cycle Offset : %d (0x%0.2X)\n\n", \
+							AVTP_SH.sph.Reserved, AVTP_SH.sph.Reserved, AVTP_SH.sph.SPH_Cycle, AVTP_SH.sph.SPH_Cycle, \
+							AVTP_SH.sph.SPH_CycleOffset, AVTP_SH.sph.SPH_CycleOffset);
+					}
+
+					if (AVTP_SH.MPEG2_Count > 0 && AVTP_SH.Data.MPEG2 != NULL)
+					{
+						for (i = 0; i < AVTP_SH.MPEG2_Count; i++)
+						{
+							sprintf(&Text[strlen(Text)], "---------------------------------------------MPEG2 Transport Stream Packet %d---------------------------------------------\n\n", i+1);
+
+							if (AVTP_SH.Data.MPEG2[i].CIPp != NULL && AVTP_SH.Data.MPEG2[i].CIP_Count > 0)
+							{
+								for (j = 0; j < AVTP_SH.Data.MPEG2[i].CIP_Count; j++)
+								{
+									sprintf(&Text[strlen(Text)], "----------CIP Header %d----------\n\nSID : %d     DBS : %d     FN : %d     QPC : %d     SPH : %d     Rsv : %d\n\n", \
+										j+1, AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.SID, \
+										AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.DBS, AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.FN, \
+										AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.QPC, AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.SPH, AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.Rsv);
+
+									MakeShortNumber(AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.SYT, &Number);
+									memset(LNumberText, 0, 100);
+									_ultoa(Number, LNumberText, 10);
+
+									if (AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.SPH == 0)
+										sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d     SYT : 0x%0.2X(%s)\n\n",\
+											AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.DBC, Type61883, AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.FDF, \
+											Number, LNumberText);
+									else
+									{
+										sprintf(&Text[strlen(Text)], "DBC : %d     FMT(61883 - Standard Type) : %s     FDF : %d\n\n", \
+											AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.DBC, Type61883, AVTP_SH.Data.MPEG2[i].CIPp[j].CIP_H.FDF);
+
+										sprintf(&Text[strlen(Text)], "----------Source Packet Header 0----------\n\nReserved : %d (0x%.2X)     SPH_Cycle : %d (0x%0.2X)     SPH Cycle Offset : %d (0x%0.2X)\n\n", \
+											AVTP_SH.Data.MPEG2[i].CIPp[j].sph.Reserved, AVTP_SH.Data.MPEG2[i].CIPp[j].sph.Reserved, \
+											AVTP_SH.Data.MPEG2[i].CIPp[j].sph.SPH_Cycle, AVTP_SH.Data.MPEG2[i].CIPp[j].sph.SPH_Cycle, \
+											AVTP_SH.Data.MPEG2[i].CIPp[j].sph.SPH_CycleOffset, AVTP_SH.Data.MPEG2[i].CIPp[j].sph.SPH_CycleOffset);
+									}
+								}
+							}
+							else if (AVTP_SH.Data.MPEG2[i].sph != NULL)
+							{
+								sprintf(&Text[strlen(Text)], "----------Source Packet Header %d----------\n\nReserved : %d (0x%.2X)     SPH_Cycle : %d (0x%0.2X)     SPH Cycle Offset : %d (0x%0.2X)\n\n", \
+									i+1,AVTP_SH.Data.MPEG2[i].sph->Reserved, AVTP_SH.Data.MPEG2[i].sph->Reserved, \
+									AVTP_SH.Data.MPEG2[i].sph->SPH_Cycle, AVTP_SH.Data.MPEG2[i].sph->SPH_Cycle, \
+									AVTP_SH.Data.MPEG2[i].sph->SPH_CycleOffset, AVTP_SH.Data.MPEG2[i].sph->SPH_CycleOffset);
+							}
+
+							sprintf(&Text[strlen(Text)], "---------------------------------------------MPEG2 - TS Header %d---------------------------------------------\n\n", i + 1);
+							
+							sprintf(&Text[strlen(Text)], "Sync Byte : 0x%0.2X     Transport Error Indicator(TEI) : %d     Payload Unit Start Indicator(PUSI) : %d\n\n", \
+								AVTP_SH.Data.MPEG2[i].Sync_Byte, AVTP_SH.Data.MPEG2[i].Transport_Error_Indicator, AVTP_SH.Data.MPEG2[i].Payload_Start_Indicator);
+
+							memset(LNumberText, 0, 100);
+							_ultoa(AVTP_SH.Data.MPEG2[i].PID, LNumberText, 10);
+
+							sprintf(&Text[strlen(Text)], "Transport Priority : %d     PID : %s(0x%0.2X)     Transport Scrambling Control : %d [%s]\n\nAdaptation Field Control : %d [%s]     Continuity Counter : %d\n\n", \
+								AVTP_SH.Data.MPEG2[i].Transport_Priority, LNumberText, AVTP_SH.Data.MPEG2[i].PID, AVTP_SH.Data.MPEG2[i].Transport_Scrambling_Control, \
+								TSC[AVTP_SH.Data.MPEG2[i].Transport_Scrambling_Control], AVTP_SH.Data.MPEG2[i].Adaptation_Field_Control, AFC[AVTP_SH.Data.MPEG2[i].Adaptation_Field_Control] , AVTP_SH.Data.MPEG2[i].Continuity_Counter);
+
+							if (AVTP_SH.Data.MPEG2[i].Adaptation_Field_Control == 2 || AVTP_SH.Data.MPEG2[i].Adaptation_Field_Control == 3)
+							{
+								sprintf(&Text[strlen(Text)], "----------Adaptation Field----------\n\nAdaptation Length : %d     Discontinuity indicator : %d     Random access indicator : %d     Elementary stream priority indicator %d\n\n", \
+									AVTP_SH.Data.MPEG2[i].AdaptationField.Length, AVTP_SH.Data.MPEG2[i].AdaptationField.Discontinuity_Indicator, \
+									AVTP_SH.Data.MPEG2[i].AdaptationField.Random_Access_Indicator, AVTP_SH.Data.MPEG2[i].AdaptationField.ES_Priority_Indicator);
+
+								is_Tab = FALSE;			// Used to add tabulator in text when write a adaptation optional fields
+
+								if (AVTP_SH.Data.MPEG2[i].AdaptationField.Various_Fl.PCR_Flag == 1)
+								{
+									memset(LNumberText, 0, 100);
+									_ui64toa(AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.PCR, LNumberText, 10);
+									N_64 = AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.PCR;
+									sprintf(&Text[strlen(Text)], "PCR : %s(0x%0.2X%0.2X%0.2X%0.2X%0.2X%0.2X)", LNumberText, \
+										((unsigned char*)&N_64)[5], ((unsigned char*)&N_64)[4], ((unsigned char*)&N_64)[3], ((unsigned char*)&N_64)[2], \
+										((unsigned char*)&N_64)[1], ((unsigned char*)&N_64)[0]);
+
+									is_Tab = TRUE;
+								}
+
+								if (AVTP_SH.Data.MPEG2[i].AdaptationField.Various_Fl.OPCR_Flag == 1)
+								{
+									if (is_Tab == TRUE)
+									{
+										sprintf(&Text[strlen(Text)], "     ");
+									}
+									else is_Tab = TRUE;
+
+									memset(LNumberText, 0, 100);
+									_ui64toa(AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.OPCR, LNumberText, 10);
+									N_64 = AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.OPCR;
+									sprintf(&Text[strlen(Text)], "OPCR : %s(0x%0.2X%0.2X%0.2X%0.2X%0.2X%0.2X)", LNumberText, \
+										((unsigned char*)&N_64)[5], ((unsigned char*)&N_64)[4], ((unsigned char*)&N_64)[3], ((unsigned char*)&N_64)[2], \
+										((unsigned char*)&N_64)[1], ((unsigned char*)&N_64)[0]);
+
+								}
+
+								if (AVTP_SH.Data.MPEG2[i].AdaptationField.Various_Fl.SplicingPoint_Flag == 1)
+								{
+									if (is_Tab == TRUE)
+									{
+										sprintf(&Text[strlen(Text)], "     ");
+									}
+									else is_Tab = TRUE;
+
+									sprintf(&Text[strlen(Text)], "Splice countdown : %d", AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.SpliceCountdown);
+								}
+
+								sprintf(&Text[strlen(Text)],"\n\n");
+
+								if (AVTP_SH.Data.MPEG2[i].AdaptationField.Various_Fl.TransportPrivateData_Flag == 1)
+								{
+									sprintf(&Text[strlen(Text)], "Transport Private Data Length : %d\n\n**********DANE(Transport Private Data)**********\n\n",\
+										AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.TransportPrivateDataLength);
+
+									pl->write(Text, strlen(Text));
+
+									memset(Text, 0, 5000);
+
+									bt = (unsigned char*)AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.TransportPrivData;
+
+									WriteFileProtData(pl, bt, AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.TransportPrivateDataLength);
+
+									bt = NULL;
+									rozm = 0;
+								}
+
+								sprintf(&Text[strlen(Text)], "\n\n");
+
+								if (AVTP_SH.Data.MPEG2[i].AdaptationField.Various_Fl.AdaptationFieldExtension_Flag == 1)
+								{
+									sprintf(&Text[strlen(Text)], "----------Adaptation Extension Field----------\n\nAdaptation extension Length : %d\n\n", \
+										AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.AdaptationExtLength);
+
+									is_Tab = FALSE;
+									j = 0;
+
+									if (AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.LegalTimeWindowFl == 1)
+									{
+										if (is_Tab == TRUE)
+										{
+											sprintf(&Text[strlen(Text)], "     ");
+										}
+										else is_Tab = TRUE;
+
+										sprintf(&Text[strlen(Text)], "LTW Valid Flag : %d     LTW Offset : 0x%0.2X", \
+											AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.OptionalFields.LTW_ValidFl, \
+											AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.OptionalFields.LTW_Offset);
+										j+=2;
+									}
+
+									if (AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.LegalTimeWindowFl == 1)
+									{
+										if (is_Tab == TRUE)
+										{
+											sprintf(&Text[strlen(Text)], "     ");
+										}
+										else is_Tab = TRUE;
+
+										sprintf(&Text[strlen(Text)], "LTW Valid Flag : %d     LTW Offset : 0x%0.2X", \
+											AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.OptionalFields.LTW_ValidFl, \
+											AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.OptionalFields.LTW_Offset);
+										j+=2;
+									}
+
+									if (j >= 4)
+									{
+										sprintf(&Text[strlen(Text)], "\n\n");
+										j = 0;
+										is_Tab = FALSE;
+									}
+
+									if (AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.PiecewiseRateFl == 1)
+									{
+										if (is_Tab == TRUE)
+										{
+											sprintf(&Text[strlen(Text)], "     ");
+										}
+										else is_Tab = TRUE;
+
+										sprintf(&Text[strlen(Text)], "Piecewise Reserved : %d     Piecewise Rate : %d (0x%0.2X)", \
+											AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.OptionalFields.Reserved, \
+											AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.OptionalFields.PiecewiseRate, \
+											AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.OptionalFields.PiecewiseRate);
+										j+=2;
+									}
+
+									if (j >= 4)
+									{
+										sprintf(&Text[strlen(Text)], "\n\n");
+										j = 0;
+										is_Tab = FALSE;
+									}
+
+									if (AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.SeamlessSpliceFl == 1)
+									{
+										if (is_Tab == TRUE)
+										{
+											sprintf(&Text[strlen(Text)], "     ");
+										}
+										else is_Tab = TRUE;
+
+										memset(LNumberText, 0, 100);
+										_ui64toa(AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.OptionalFields.DTS_NextAccess, LNumberText, 10);
+										N_64 = AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.OptionalFields.DTS_NextAccess;
+
+										sprintf(&Text[strlen(Text)], "Splice Type : %d     DTS Next Access Unit : %s(0x%0.2X%0.2X%0.2X%0.2X%0.2X)", \
+											AVTP_SH.Data.MPEG2[i].AdaptationField.OptionalF.AdaptExt.OptionalFields.SpliceType, LNumberText, \
+											((unsigned char*)&N_64)[4], ((unsigned char*)&N_64)[3], ((unsigned char*)&N_64)[2], \
+											((unsigned char*)&N_64)[1], ((unsigned char*)&N_64)[0]);
+									}
+
+									sprintf(&Text[strlen(Text)], "\n\n");
+								}
+
+							}
+
+							pl->write(Text, strlen(Text));
+
+							memset(Text, 0, 5000);
+
+							if (AVTP_SH.Data.MPEG2[i].Adaptation_Field_Control == 1 || AVTP_SH.Data.MPEG2[i].Adaptation_Field_Control == 3)
+							{
+								if (AVTP_SH.Data.MPEG2[i].PayloadLength > 0 && AVTP_SH.Data.MPEG2[i].PayloadLength <= 184)
+								{
+									sprintf(&Text[strlen(Text)], "----------MPEG2 Transport Stream Payload Data----------\n\n");
+									pl->write(Text, strlen(Text));
+									memset(Text, 0, 5000);
+
+									WriteFileProtData(pl, (PVOID)AVTP_SH.Data.MPEG2[i].Payload, AVTP_SH.Data.MPEG2[i].PayloadLength);
+								}
+							}
+
+							sprintf(&Text[strlen(Text)], "\n\n");
+						}
+					} 
+					else
+						pl->write(Text, strlen(Text));
+					
+					return 0;
+
+				}
 
 			}
 
@@ -605,6 +957,8 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 				strcpy(Text1, "**********DANE(Video\\Audio Stream)**********\n\n");
 				pl->write(Text1, strlen(Text1));
 
+				WriteFileProtData(pl, (PVOID)bt, rozm);
+/*
 				licz = 0;
 
 				memset(Text1, 0, 500);
@@ -651,6 +1005,8 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 					pl->write(Text1, strlen(Text1));
 				}
+
+				*/
 			}
 		}
 	}

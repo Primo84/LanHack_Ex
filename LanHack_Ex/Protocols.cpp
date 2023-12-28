@@ -1475,7 +1475,17 @@ int ConvertAVTPStreamHeadToBuffer(AVTP_StreamHead* avtp, PVOID Buffer, int *Buff
 								if (i == 0 && avtp->CIP_H.SPH == 1)
 									Length = 20 + (24 * (avtp->CIP_H.DBC - 1));
 								else
-									Length = 24 * avtp->CIP_H.DBC;
+								{
+									if (i > 0 && avtp->Data.MPEG2->CIPp != NULL && avtp->Data.MPEG2->CIP_Count >= i)
+									{
+										if (avtp->Data.MPEG2->CIPp[i - 1].CIP_H.SPH == 1)
+											Length = 20 + (24 * (avtp->CIP_H.DBC - 1));
+										else
+											Length = 24 * avtp->CIP_H.DBC;
+									}
+									else
+										Length = 24 * avtp->CIP_H.DBC;
+								}
 
 								memcpy(&((unsigned char*)Buffer)[DataOffset], &BufferEx[BufferOffset], Length);
 

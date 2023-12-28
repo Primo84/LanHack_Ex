@@ -14,9 +14,6 @@ PacketBuff MPRecv_Buf;
 PacketBuff MPSend_Buf;
 PacketBuff RecvProt_Buf;
 
-HMODULE HM;
-
-
 LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 {
 	int i, OPM, ret;
@@ -1098,12 +1095,6 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 	}
 	return 0;
 }
-
-typedef struct EBuffer
-{
-	unsigned char Buf[1000];
-
-}EBuff;
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_show)
 {
