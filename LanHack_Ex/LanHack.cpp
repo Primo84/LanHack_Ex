@@ -1096,6 +1096,12 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 	return 0;
 }
 
+typedef struct _Buff
+{
+	unsigned char B[500];
+
+}Buff, * PBuff;
+
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_show)
 {
 	WNDCLASSEX MainClass;
@@ -1112,7 +1118,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 	MainClass.lpfnWndProc = (WNDPROC)&WndProc;
 	MainClass.hCursor = LoadCursor(NULL, IDC_ARROW);
 	MainClass.hbrBackground = CreatePatternBrush(LoadBitmapA(instance, MAKEINTRESOURCEA(IDB_BACK)));
-
 
 	InitCommonControls();
 
@@ -1132,7 +1137,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 
 			Miniport = GetMiniports(&MiniportCount);
 			ShowWindow(WindowHandle, SW_SHOWNORMAL);
-
 
 			while (GetMessage(&message, NULL, 0, 0))
 			{

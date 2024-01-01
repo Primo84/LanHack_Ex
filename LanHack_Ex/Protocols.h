@@ -544,6 +544,7 @@ typedef struct Ip_Prot_V4
 	unsigned char AdresZrodl[4];
 	unsigned char AdresDocel[4];
 	unsigned char Dane[1];			//	Dane. Jeœli D³ugoœæ Nag³ówka jest wiêksza ni¿ 5 to przed danymi do³¹czane jest pole opcji
+
 }IpProt;
 
 
@@ -582,6 +583,7 @@ typedef struct ARP_
 	unsigned char IPSender[4];
 	unsigned char HardwareTargetAddress[6];
 	unsigned char IPTarget[4];
+
 }ARP;
 
 
@@ -619,12 +621,14 @@ typedef struct TCI_
 	unsigned char PCP : 3;
 	unsigned char DEI : 1;
 	unsigned short VID : 12;
+
 }TCI;
 
 typedef struct TaggedFrame_802_1q
 {
 	unsigned char TPID[2];
 	unsigned char TCI[2];
+
 }TF_802_1g;
 
 
@@ -883,6 +887,38 @@ typedef struct AVTP_Prot
 }AVTP;
 
 
+
+
+/*---------------------------------------------------------
+
+
+	TRILL (Transparent Interconnection of Lots of Links)
+
+
+----------------------------------------------------------*/
+
+
+
+typedef struct _TRILL_Prot
+{
+	struct _HEAD
+	{
+		unsigned char Version : 2;
+		unsigned char Reserved : 2;
+		unsigned char MultiDest : 1;
+		unsigned char OptionsLength : 5;
+		unsigned char HopLimit : 6;
+
+	}Head;
+
+	unsigned char EgressNickname[2];
+	unsigned char IngressNickname[2];
+	unsigned char *Options;
+
+}TRILL_Prot;
+
+
+
 /*---------------------------------------------------------
 
 
@@ -1069,9 +1105,22 @@ typedef struct IPV_6
 
 
 
+/*
 
 
 
+	  -----------------Funkcje protoko³u TRILL------------------------------
+
+
+
+*/
+
+
+int MakeTRILL_Header(PVOID Frame, TRILL_Prot *trillProt, int DataSize);
+
+int ConvertTRILLHeaderToBuffer(TRILL_Prot* trillProt, PVOID Buffer, int *BufferSize);
+
+int ReleaseTRILLHeader(TRILL_Prot* trillProt);
 
 
 

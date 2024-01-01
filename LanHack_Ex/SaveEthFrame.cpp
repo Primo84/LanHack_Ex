@@ -118,7 +118,8 @@ int SaveARPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	if (Frame == NULL || pl == NULL) return 1;
 
-
+	if (DataSize < 28)
+		return 2;
 
 	ArpFrame = (ARP*)Frame;
 
@@ -159,6 +160,9 @@ int SaveWakeOnLanFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 	WakeOnLan *WakeFrame;
 	char Text[500];
 	int i,RestSize; 
+
+	if (DataSize < 103)
+		return 2;
 
 	WakeFrame = (WakeOnLan*)Frame;
 
@@ -203,6 +207,8 @@ int SaveIPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	if (Frame == NULL || pl == NULL) return 1;
 
+	if (DataSize < 20)
+		return 2;
 
 	IPFrame = (IpProt*)Frame;
 
@@ -237,9 +243,17 @@ int SaveIPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 	if (IHLV.IHL == 5)
 		P = (PVOID)IPFrame->Dane;
 	else
+	{
+		if (DataSize < (((int)IHLV.IHL) * 4))
+			return 2;
+
 		P = (PVOID)(((char*)Frame) + (((int)IHLV.IHL) * 4));
+	}
 
 	MakeShortNumber((unsigned short*)IPFrame->RozmiarPaketu, &rozmiar);
+
+	if (DataSize < rozmiar)
+		return 2;
 
 	rozmiar = rozmiar - (4 * IHLV.IHL);
 
@@ -264,6 +278,8 @@ int SaveIPV6Frame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	if (Frame == NULL || pl == NULL) return 1;
 
+	if (DataSize < 40) 
+		return 2;
 
 	IPV6Frame = (IPV6*)Frame;
 
@@ -297,6 +313,8 @@ int SaveIPV6Frame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	MakeShortNumber((unsigned short*)IPV6Frame->DlugLadunku, &rozmiar);
 
+	if (DataSize < 40 + rozmiar)
+		return 2;
 
 	P = (PVOID)IPV6Frame->Dane;
 
@@ -320,6 +338,10 @@ int SaveLLC(PVOID Frame, fstream* pl, unsigned short DataSize)
 	char Text[1000];
 	char PortRole[4][80] = { "0 - Unused\0","01 - Port Role Alternate/Backup in RST/MST/SPT BPDU0\0",\
 							"10 - Port Role Root in RST/MST/SPT BPDU\0","11 - Port Role Designated in RST/MST/SPT BPDU\0" };
+
+	if (DataSize < 38) 
+		return 2;
+
 	BS = (BridgeSpan*)Frame;
 
 	MakeBridgeFlags(BS->Flags, &BF);
@@ -409,6 +431,11 @@ int SaveIEE802_1qTagFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 	unsigned char* bt;
 	int i;
 
+	if (Frame == NULL || pl == NULL) return 1;
+
+	if(DataSize < 4) 
+		return 2;
+
 	memset(Text, 0, 1000);
 
 	P = (PVOID) (((unsigned char*)Frame)+4);
@@ -427,6 +454,8 @@ int SaveIEE802_1qTagFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	if (EType == 0x22F0)
 		SaveAVTPFrame(P, pl, DataSize - 4);
+	else if (EType == 0x22F3)
+		SaveTRILL_Frame(P, pl, DataSize - 4);
 	else
 	{
 		for (i = 0; i < 55; i++)
@@ -466,8 +495,10 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 	BOOL is_Tab;
 
 
+	if (Frame == NULL || pl == NULL) return 1;
 
-	if (DataSize <= 0) return 0;
+	if (DataSize <= 0)
+		return 2;
 
 	bt = NULL;
 	rozm = 0;
@@ -647,6 +678,8 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 						bt = (unsigned char*)AVTP_SH.Data.VD.VideoBytes;
 					}
 
+					ReleaseAVTP_StreamHeader(&AVTP_SH);
+
 				}
 				else if (AVTP_SH.CIP_H.FMT == 0x10)
 				{
@@ -687,6 +720,8 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 							}
 						}
 					}
+
+					ReleaseAVTP_StreamHeader(&AVTP_SH);
 
 				}
 				else if (AVTP_SH.CIP_H.FMT == 0x20)
@@ -942,7 +977,9 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 					} 
 					else
 						pl->write(Text, strlen(Text));
-					
+
+					ReleaseAVTP_StreamHeader(&AVTP_SH);
+
 					return 0;
 
 				}
@@ -958,56 +995,9 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 				pl->write(Text1, strlen(Text1));
 
 				WriteFileProtData(pl, (PVOID)bt, rozm);
-/*
-				licz = 0;
 
-				memset(Text1, 0, 500);
-				memset(Text, 0, 5000);
-
-				for (i = 0; i < rozm; i++)
-				{
-
-					if (bt[i] <= 32 || bt[i] > 127)
-				//	if ((bt[i] >= 0 && bt[i] <= 32) || (bt[i]==0xAD) || (bt[i]==0xA0))
-						sprintf(&Text[strlen(Text)], ".");
-					else
-						sprintf(&Text[strlen(Text)], "%c", bt[i]);
-
-					sprintf(&Text1[strlen(Text1)], "%0.2X ", bt[i]);
-
-					licz++;
-
-					if (licz == 20)
-					{
-						sprintf(&Text1[strlen(Text1)], "\n");
-						sprintf(&Text[strlen(Text)], "                    ");
-
-						pl->write(Text, strlen(Text));
-
-						pl->write(Text1, strlen(Text1));
-
-						memset(Text1, 0, 500);
-						memset(Text, 0, 5000);
-
-						licz = 0;
-					}
-				}
-
-				if (licz > 0)
-				{
-					sprintf(&Text1[strlen(Text1)], "\n");
-					sprintf(&Text[strlen(Text)], "                    ");
-
-					for (i = licz; i < 20; i++)
-						sprintf(&Text[strlen(Text)], " ");
-
-					pl->write(Text, strlen(Text));
-
-					pl->write(Text1, strlen(Text1));
-				}
-
-				*/
 			}
+
 		}
 	}
 	else
@@ -1016,5 +1006,59 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 		pl->write(Text, strlen(Text));
 	}
 	
+	return 0;
+}
+
+
+int SaveTRILL_Frame(PVOID Frame, fstream* pl, unsigned short DataSize)
+{
+
+	TRILL_Prot trillProt;
+
+	char Text[5000];
+
+	unsigned char* bt;
+
+	unsigned short EgrVal, IngrVal;
+
+	if (Frame == NULL || pl == NULL) return 1;
+
+	if (DataSize <= 6)
+		return 2;
+
+	if (MakeTRILL_Header(Frame, &trillProt, DataSize) == 0)
+	{
+
+		memset(Text, 0, 5000);
+
+		sprintf(Text, "---------------------------------------------TRILL (Transparent Interconnection of Lots of Links)---------------------------------------------\n\n");
+
+		sprintf(&Text[strlen(Text)], "Version : %d     Reserved : %d     Multi Destination : %d\n\n", trillProt.Head.Version, trillProt.Head.Reserved, trillProt.Head.MultiDest);
+		
+		sprintf(&Text[strlen(Text)], "Options Length : %d     Hop Count : %d\n\n", trillProt.Head.OptionsLength, trillProt.Head.HopLimit);
+
+		MakeShortNumber((PVOID)trillProt.EgressNickname, &EgrVal);
+
+		MakeShortNumber((PVOID)trillProt.IngressNickname, &IngrVal);
+
+		sprintf(&Text[strlen(Text)], "Egress RBridge Nickname : %d(0x%0.2X)     Ingress RBridge Nickname : %d(0x%0.2X)\n\n", \
+			EgrVal, EgrVal, IngrVal, IngrVal);
+
+		pl->write(Text, strlen(Text));
+
+		if (trillProt.Head.OptionsLength > 0)
+		{
+			memset(Text, 0, 5000);
+			
+			sprintf(Text, "----------Options----------\n\n");
+			pl->write(Text, strlen(Text));
+
+			WriteFileProtData(pl, (PVOID)trillProt.Options, trillProt.Head.OptionsLength);
+		}
+
+		ReleaseTRILLHeader(&trillProt);
+	}
+
+
 	return 0;
 }

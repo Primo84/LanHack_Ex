@@ -29,6 +29,8 @@ int SaveIEE802_1qTagFrame(PVOID Frame, fstream* pl, unsigned short DataSize);
 
 int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize);
 
+int SaveTRILL_Frame(PVOID Frame, fstream* pl, unsigned short DataSize);
+
 
 
 int SaveLLC(PVOID Frame, fstream* pl, unsigned short DataSize);

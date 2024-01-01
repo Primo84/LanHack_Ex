@@ -1564,6 +1564,43 @@ int AddIPv6_FrameToTable(PVOID Frame, HWND PacketTable, int Item)
 	return 0;
 }
 
+BOOL CheckFilterVLAN_Tagged(PVOID NetworkData, unsigned short EType, unsigned short ETypeToCheck, int *NetworkDataOffset)
+{
+	unsigned short ET;
+
+	if (NetworkData == NULL || NetworkDataOffset == NULL)
+		return FALSE;
+
+	*NetworkDataOffset = 0;
+
+	if (EType == ETypeToCheck)
+		return TRUE;
+
+
+	if (EType == 0x8100 || EType == 0x88A8)
+	{
+		MakeShortNumber((PVOID)(((unsigned char*)NetworkData) + 2), &ET);
+
+		if (ET != ETypeToCheck)
+		{
+			if (ET == 0x8100 || ET == 0x88A8)
+			{
+				MakeShortNumber((PVOID)(((unsigned char*)NetworkData) + 6), &ET);
+
+				if (ET != ETypeToCheck)
+					return FALSE;
+
+				*NetworkDataOffset = 8;
+			}
+			else return FALSE;
+		}
+		else *NetworkDataOffset =  4;
+	}
+	
+	return TRUE;
+}
+
+
 BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame)
 {
 	char Text_[50];
@@ -2082,7 +2119,7 @@ BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short ETyp
 	PVOID P,NetwData;
 	unsigned short port;
 	unsigned char* bt;
-	unsigned short ET;
+//	unsigned short ET;
 
 	NetwData = NetworkData;
 
@@ -2093,29 +2130,17 @@ BOOL CheckFilterIP(PacketFilter* PFilter, PVOID NetworkData, unsigned short ETyp
 	
 		if (strcmp(PFilter->EType, "AVTP") == 0)
 		{
-			if (EType == 0x8100 || EType == 0x88A8 || EType == 0x22F0)
-			{
-				if (EType == 0x8100 || EType == 0x88A8)
-				{
-					MakeShortNumber((PVOID)(((unsigned char*)NetworkData) + 2), &ET);
-
-					if (ET != 0x22F0)
-					{
-						if (ET == 0x8100 || ET == 0x88A8)
-						{
-							MakeShortNumber((PVOID)(((unsigned char*)NetworkData) + 6), &ET);
-
-							if (ET != 0x22F0)
-								return FALSE;
-
-							NetwData = (PVOID)(((unsigned char*)NetworkData) + 8);
-						}
-					}
-					else NetwData = (PVOID)(((unsigned char*)NetworkData) + 4);
-				}
-			}
-			else 
+			if(!CheckFilterVLAN_Tagged(NetworkData, EType, 0x22F0, &i))
 				return FALSE;
+
+			NetwData = (PVOID)(((unsigned char*)NetworkData) + i);
+		}
+		else if (strcmp(PFilter->EType, "IETF TRILL Protocol") == 0)
+		{
+			if (!CheckFilterVLAN_Tagged(NetworkData, EType, 0x22F3, &i))
+				return FALSE;
+
+			NetwData = (PVOID)(((unsigned char*)NetworkData) + i);
 		}
 		else
 		{
@@ -2536,6 +2561,9 @@ int InitTableSaveProc()
 
 	TSaveProc[4].EType = 0x22F0;
 	TSaveProc[4].Proc = &SaveAVTPFrame;						//Audio Video Transport Protocol
+
+	TSaveProc[5].EType = 0x22F3;
+	TSaveProc[5].Proc = &SaveTRILL_Frame;						//TRILL (Transparent Interconnection of Lots of Links)
 
 	TSaveProc[12].EType = 0x8100;
 	TSaveProc[12].Proc = &SaveIEE802_1qTagFrame;			//802.1q VLAN Tagged Frame(AVTP itp.....)

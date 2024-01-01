@@ -54,6 +54,8 @@ int InitBuffers(PacketBuff* RecvP, PacketBuff* RecvMP, PacketBuff* SendMP);
 int DestroyBuffers();
 int InitData(HWND MPTR, HWND MPTS, HWND PPT ,StaticText *RecText, StaticText *SendText, StaticText *ProtText, HINSTANCE MInstance);
 
+BOOL CheckFilterVLAN_Tagged(PVOID NetwoData, unsigned short EType, unsigned short ETypeToCheck, int* NetworkDataOffset);
+
 BOOL CheckFilter(PacketFilter* PFilter, EHeader* EthernetFrame);
 
 BOOL CheckFilter802_3(PacketFilter* PFilter, EHeader* EthernetFrame);

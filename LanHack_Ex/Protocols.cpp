@@ -1737,3 +1737,83 @@ int MakeRootBridgeId(unsigned char *RB_Id, RootBridgeId *RBID)
 
 	return 0;
 }
+
+
+int MakeTRILL_Header(PVOID Frame, TRILL_Prot* trillProt, int DataSize)
+{
+	unsigned short Val;
+
+	if (Frame == NULL || trillProt == NULL)
+		return 1;
+
+	if (DataSize < 6)
+		return 2;
+
+	MakeShortNumber(Frame, &Val);
+
+	trillProt->Head.Version = (Val & 0xC000) >> 14;
+	trillProt->Head.Reserved = (Val & 0x3000) >> 12;
+	trillProt->Head.MultiDest = (Val & 0x800) >> 11;
+	trillProt->Head.OptionsLength = (Val & 0x7C0) >> 6;
+	trillProt->Head.HopLimit = Val & 0x3F;
+
+	memcpy(trillProt->EgressNickname, &((unsigned char*)Frame)[2], 2);
+	memcpy(trillProt->IngressNickname, &((unsigned char*)Frame)[4], 2);
+
+	if (trillProt->Head.OptionsLength > 0)
+	{
+		if (DataSize < trillProt->Head.OptionsLength + 6)
+			return 2;
+
+		trillProt->Options = (unsigned char*)malloc(trillProt->Head.OptionsLength);
+		memcpy(trillProt->Options, &((unsigned char*)Frame)[6], trillProt->Head.OptionsLength);
+	}
+
+	return 0;
+}
+
+int ReleaseTRILLHeader(TRILL_Prot* trillProt)
+{
+	if (trillProt == NULL)
+		return 1;
+
+	if (trillProt->Options != NULL)
+		delete(trillProt->Options);
+
+	return 0;
+}
+
+int ConvertTRILLHeaderToBuffer(TRILL_Prot* trillProt, PVOID Buffer, int *BufferSize)
+{
+	unsigned short sVal;
+	int i, j;
+
+	if (trillProt == NULL || Buffer == NULL || BufferSize == NULL)
+		return 1;
+
+	if (trillProt->Options != NULL && trillProt->Head.OptionsLength > 0 )
+	{
+		if (*BufferSize < 6 + trillProt->Head.OptionsLength)
+			return 2;
+
+		memcpy(&((unsigned char*)Buffer)[6], trillProt->Options, trillProt->Head.OptionsLength);
+	}
+	else if (*BufferSize < 6)
+		return 2;
+
+	sVal = 0;
+
+	sVal = sVal | (trillProt->Head.Version << 14);
+	sVal = sVal | (trillProt->Head.Reserved << 12);
+	sVal = sVal | (trillProt->Head.MultiDest << 11);
+	sVal = sVal | (trillProt->Head.OptionsLength << 6);
+	sVal = sVal | trillProt->Head.HopLimit;
+
+	((unsigned char*)Buffer)[0] = ((unsigned char*)&sVal)[1];
+	((unsigned char*)Buffer)[1] = ((unsigned char*)&sVal)[0];
+
+	memcpy(&((unsigned char*)Buffer)[2], trillProt->EgressNickname, 2);
+	memcpy(&((unsigned char*)Buffer)[4], trillProt->IngressNickname, 2);
+
+	return 0;
+}

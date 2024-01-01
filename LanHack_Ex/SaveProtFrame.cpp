@@ -49,7 +49,7 @@ int SaveTCP(PVOID Frame, fstream* pl, unsigned short TcpSize)
 	DataOffset DOffs;
 
 
-	if (TcpSize <= 0)
+	if (TcpSize < 20)
 		return 1;
 
 	TcpFrame = (TcpProt*)Frame;
@@ -153,7 +153,7 @@ int SaveUDP(PVOID Frame, fstream* pl, unsigned short UdpSize)
 	int rozm;
 	unsigned char* bt;
 
-	if (UdpSize <= 0)
+	if (UdpSize < 8)
 		return 1;
 
 	UDPFrame = (UDPProt*)Frame;
