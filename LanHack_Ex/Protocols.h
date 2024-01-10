@@ -877,14 +877,6 @@ typedef struct AVTP_Strem_Header			//cd=0
 
 }AVTP_StreamHead;
 
-typedef struct AVTP_Prot
-{
-	unsigned char MainHeader[2];  // AVTP_MainHead
-	unsigned char Data2[2];		 // subtype_data_2 / control fields(status, control frame length)
-	unsigned char StreamID[8];
-	unsigned char Data[1];		// Aditional header and patload data and padding varies
-
-}AVTP;
 
 
 

@@ -48,6 +48,7 @@ int AddPacketToTable802_11_Extension(EHeader EthernetFrame, HWND PacketTable, Fr
 int AddIPFrameToTable(PVOID Frame, HWND PacketTable, int Item);
 int AddARP_FrameToTable(PVOID Frame, HWND PacketTable, int Item);
 int AddIPv6_FrameToTable(PVOID Frame, HWND PacketTable, int Item);
+int Add802_1_VlanTaggedFrameToTable(PVOID Frame, HWND PacketTable, int Item);
 
 
 int InitBuffers(PacketBuff* RecvP, PacketBuff* RecvMP, PacketBuff* SendMP);

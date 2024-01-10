@@ -1430,6 +1430,78 @@ int AddIPFrameToTable(PVOID Frame, HWND PacketTable, int Item)
 	return 0;
 }
 
+int Add802_1_VlanTaggedFrameToTable(PVOID Frame, HWND PacketTable, int Item)
+{
+	LVITEMA LVI;
+	char ItemText[45];
+	char ProtType[45];
+	unsigned char* IPByte;
+	AVTP_StreamHead AVTP_SH;
+	AVTP_ControlHead AVTP_CH;
+	unsigned short EType;
+
+	if (Frame == NULL || PacketTable == NULL) return 1;
+
+	memset(ItemText, 0, 45);
+
+	memset(&LVI, 0, sizeof(LVITEMA));
+
+	LVI.mask = LVIF_TEXT;
+	LVI.pszText = ItemText;
+
+	LVI.iItem = Item;
+
+	MakeShortNumber(&((unsigned char*)Frame)[2], &EType);
+
+	if (EType == 0x22F3)
+		sprintf(ItemText, "	IETF TRILL Protocol");
+	else if (EType == 0x22F0)
+	{
+		if (MakeAVTP_ControlHead(&((unsigned char*)Frame)[4], &AVTP_CH) == 0)
+		{
+			sprintf(ItemText, "AVTP");
+			
+			switch (AVTP_CH.SubType)
+			{
+				case 0x00:
+				{
+
+					sprintf(&ItemText[strlen(ItemText)], "(61883/IIDC over AVTP)\n\n");
+
+					break;
+				}
+				case 0x01:
+				{
+					sprintf(&ItemText[strlen(ItemText)], "(MMA Protocol) \n\n");
+
+					break;
+				}
+				case 0x7E:
+				{
+					sprintf(&ItemText[strlen(ItemText)], "(MAAP Protocol)\n\n");
+
+					break;
+				}
+				case 0x7F:
+				{
+					sprintf(&ItemText[strlen(ItemText)], "(Experimental)\n\n");
+
+					break;
+				}
+			}
+		}
+		else 
+			sprintf(ItemText, "AVTP unkown frame type");
+	}
+
+
+	LVI.iSubItem = 8;
+	//ListView_SetItem(PacketTable, &LVI);
+	SendMessageA(PacketTable, LVM_SETITEMA, 0, (LPARAM)&LVI);
+
+	return 0;
+}
+
 int AddARP_FrameToTable(PVOID Frame, HWND PacketTable, int Item)
 {
 	LVITEMA LVI;
@@ -2539,6 +2611,10 @@ int InitTableProc()
 
 	TProc[1].EType = 0x806;
 	TProc[1].Proc = &AddARP_FrameToTable;
+
+	TProc[12].EType = 0x8100;
+	TProc[12].Proc = &Add802_1_VlanTaggedFrameToTable;
+	
 
 	TProc[17].EType = 0x86DD;
 	TProc[17].Proc = &AddIPv6_FrameToTable;
