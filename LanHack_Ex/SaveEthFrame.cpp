@@ -329,7 +329,7 @@ int SaveIPV6Frame(PVOID Frame, fstream* pl, unsigned short DataSize)
 }
 
 
-int SaveLLC(PVOID Frame, fstream* pl, unsigned short DataSize)
+int SaveBridgeSpanFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 {
 	BridgeSpan* BS;
 	BridgeFlags BF;
@@ -339,7 +339,7 @@ int SaveLLC(PVOID Frame, fstream* pl, unsigned short DataSize)
 	char PortRole[4][80] = { "0 - Unused\0","01 - Port Role Alternate/Backup in RST/MST/SPT BPDU0\0",\
 							"10 - Port Role Root in RST/MST/SPT BPDU\0","11 - Port Role Designated in RST/MST/SPT BPDU\0" };
 
-	if (DataSize < 38) 
+	if (DataSize < 35)
 		return 2;
 
 	BS = (BridgeSpan*)Frame;
@@ -348,9 +348,11 @@ int SaveLLC(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	memset(Text, 0, 1000);
 
-	sprintf(Text, "Spanning Tree Protocol");
+	sprintf(Text, "Spanning Tree Protocol     ");
 
-	sprintf(&Text[strlen(Text)], "Protocol ID: 0x%0.2X   Version : 0x%0.2X   ", BS->ProtocolId, BS->Version);
+	MakeShortNumber(BS->ProtocolId, &us);
+
+	sprintf(&Text[strlen(Text)], "Protocol ID: 0x%0.2X   Version : 0x%0.2X   ", us, BS->Version);
 
 	if (BS->BDU_Type == 0)
 		sprintf(&Text[strlen(Text)], "BDU Type : STP Config\n\n");
@@ -409,6 +411,9 @@ int SaveLLC(PVOID Frame, fstream* pl, unsigned short DataSize)
 	MakeShortNumber((unsigned short*)BS->ForwadDelay, &us);
 	us = *((unsigned short*)BS->ForwadDelay);
 
+	sprintf(&Text[strlen(Text)], "Forward Delay : 0x%0.2x (%d)\n\n", us, us);
+
+/*
 	sprintf(&Text[strlen(Text)], "Forward Delay : 0x%0.2x (%d)\n\nVersion 1 : 0x%0.2x (%d)\n\n", us, us, *((unsigned char*)BS->Ver1_Lenght), *((unsigned char*)BS->Ver1_Lenght));
 
 
@@ -416,8 +421,23 @@ int SaveLLC(PVOID Frame, fstream* pl, unsigned short DataSize)
 	us = *((unsigned short*)BS->Ver3_Lenght);
 
 	sprintf(&Text[strlen(Text)], "Version 3 : 0x%0.2x (%d)\n\n", us, us);
+*/
 
 	pl->write(Text, strlen(Text));
+
+	return 0;
+}
+
+int SaveLLC(PVOID Frame, fstream* pl, unsigned short DataSize, LLC_H *llc)
+{
+	if (llc == NULL || pl == NULL)
+		return 1;
+
+	if (DataSize <= 0)
+		return 2;
+
+	if (llc->DSAP == 0x42 && llc->SSAP == 0x42)
+		SaveBridgeSpanFrame(Frame, pl, DataSize);
 
 	return 0;
 }

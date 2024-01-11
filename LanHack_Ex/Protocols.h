@@ -65,8 +65,8 @@ typedef struct Bridge_Spanning
 	unsigned char MaxAge[2];
 	unsigned char HelloTime[2];
 	unsigned char ForwadDelay[2];
-	unsigned char Ver1_Lenght[1];
-	unsigned char Ver3_Lenght[2];
+//	unsigned char Ver1_Lenght[1];
+//	unsigned char Ver3_Lenght[2];
 
 }BridgeSpan;
 

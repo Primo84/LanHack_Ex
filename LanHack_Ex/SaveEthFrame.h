@@ -32,5 +32,19 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize);
 int SaveTRILL_Frame(PVOID Frame, fstream* pl, unsigned short DataSize);
 
 
+/*                           
 
-int SaveLLC(PVOID Frame, fstream* pl, unsigned short DataSize);
+
+
+							LLC (Logical linc Control Frames)
+
+							EthetType < 1500
+
+
+
+*/
+
+
+int SaveBridgeSpanFrame(PVOID Frame, fstream* pl, unsigned short DataSize);
+
+int SaveLLC(PVOID Frame, fstream* pl, unsigned short DataSize, LLC_H *llc);

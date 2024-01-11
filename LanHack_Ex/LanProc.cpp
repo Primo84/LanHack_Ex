@@ -2787,9 +2787,9 @@ int SaveEthernetTable(EHeader* EthernetFrame, fstream *pl)
 			}
 		}
 	}
-	else if (EType <= 1500)
+	else if (EType <= 1500 && LLC != NULL)
 	{
-		SaveLLC(P, pl, EthernetFrame->DataSize);
+		SaveLLC(P, pl, EthernetFrame->DataSize, LLC);
 	}
 
 	return 0;
@@ -3244,9 +3244,9 @@ int SaveDataTable(EHeader* EthernetFrame, FrameControl* FC, fstream *pl)
 			}
 		}
 	}
-	else if (EType <= 1500)
+	else if (EType <= 1500 && LLC != NULL)
 	{
-		SaveLLC(P, pl, EthernetFrame->DataSize);
+		SaveLLC(P, pl, DataSize, LLC);
 	}
 	
 
