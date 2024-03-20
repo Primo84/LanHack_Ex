@@ -342,9 +342,9 @@ LRESULT CALLBACK AdapterInfoDlg(HWND handle, int code, WPARAM wp, LPARAM lp)
 
 			i++;
 			
-			if (Adapter->CurrentMode & OPERATION_MODE_MANUFACTURING == OPERATION_MODE_MANUFACTURING)
+			if ((Adapter->CurrentMode & OPERATION_MODE_MANUFACTURING) == OPERATION_MODE_MANUFACTURING)
 				l = 415;
-			else if (Adapter->CurrentMode & OPERATION_MODE_NETWORK_MONITOR == OPERATION_MODE_NETWORK_MONITOR)
+			else if ((Adapter->CurrentMode & OPERATION_MODE_NETWORK_MONITOR) == OPERATION_MODE_NETWORK_MONITOR)
 				l = 416;
 			else l = IDS_OP_MODE_UNKOWN + Adapter->CurrentMode;
 
@@ -358,7 +358,7 @@ LRESULT CALLBACK AdapterInfoDlg(HWND handle, int code, WPARAM wp, LPARAM lp)
 			i++;
 
 			l = 157;
-			l = l + Adapter->PhysicalMediumType;
+			l = l + (int)Adapter->PhysicalMediumType;
 			memset(ListStr, 0, 150);
 			sprintf(ListStr, "Typ Medium: ");
 			LoadStringA(Instance, l, (LPSTR)&ListStr[strlen(ListStr)], 138);
@@ -641,7 +641,7 @@ LRESULT CALLBACK AdapterModeDlg(HWND handle, int code, WPARAM wp, LPARAM lp)
 					EndDialog(LanHackDialoges, CurrMode[i]);
 			}
 			else
-				MessageBox(handle, L"Tryb pracy nie zosta³ zmieniony", L"Wiado,moœæ",MB_OK);
+				MessageBox(handle, L"Tryb pracy nie zosta³ zmieniony", L"Wiadomoœæ",MB_OK);
 			break;
 		}
 
@@ -772,7 +772,7 @@ LRESULT CALLBACK MiniportInfoDlg(HWND handle, int code, WPARAM wp, LPARAM lp)
 			i++;
 
 			l = 157;
-			l = l + Ump->PhysicalMediumType;
+			l = l + (int)Ump->PhysicalMediumType;
 			memset(ListStr, 0, 150);
 			sprintf(ListStr, "Typ Medium: ");
 			LoadStringA(Instance, l, (LPSTR)&ListStr[strlen(ListStr)], 138);

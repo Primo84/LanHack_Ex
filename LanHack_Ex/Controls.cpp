@@ -31,7 +31,7 @@ LRESULT CALLBACK SysButtonProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 {
 	PAINTSTRUCT Pstruct;
 	HDC DestDc, SrcDc;
-	RECT WPos,W_Rect;
+	RECT W_Rect;
 	HPEN Pen_;
 	COLORREF MPcolor;
 	HBRUSH MPBackgr;
@@ -182,7 +182,7 @@ LRESULT CALLBACK SysButtonProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 		SButton = (Sys_Button*)GetProp(handle, L"CLASS_BUTTON");
 		if (SButton->Mode == close)
 			SendMessage(GetParent(handle), WM_CLOSE, 0, 0);
-		else if (SButton->Mode = minimize)
+		else if (SButton->Mode == minimize)
 			ShowWindow(GetParent(handle), SW_MINIMIZE);
 		else if (SButton->Mode == maximize)
 			ShowWindow(GetParent(handle), SW_MAXIMIZE);
@@ -284,7 +284,6 @@ BOOL CALLBACK EnumChildW(_In_ HWND   hwnd, _In_ LPARAM lParam)
 	RECT MenuRC, ControlRC;
 	HRGN rgn;
 	BOOL bl;
-	RECT WRect;
 
 	MenuButton* MButton;
 
@@ -403,12 +402,8 @@ LRESULT CALLBACK MenuItemProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 	MenuButton* MButton;
 	PAINTSTRUCT Pstruct;
 	HDC DestDc, SrcDc;
-	int i, x, y;
+	int i, y;
 	RECT F_Rect, W_Rect;
-	COLORREF col;
-	COLORREF MPcolor;
-	HBRUSH MPBackgr;
-	int xPos, yPos;
 
 	switch (code)
 	{
@@ -592,15 +587,13 @@ LRESULT CALLBACK MenuButtonProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 {
 	MenuButton* MButton;
 	PAINTSTRUCT Pstruct;
-	HDC DestDc, SrcDc, MemDc;
+	HDC DestDc, MemDc;
 	SIZE FSize;
-	int i, x, y;
+	int i;
 	RECT F_Rect;
-	COLORREF col;
 	COLORREF MPcolor;
 	HBRUSH MPBackgr;
 	RECT W_Rect;
-	POINT pt;
 
 	switch (code)
 	{
@@ -975,7 +968,7 @@ int MenuButton::CreateControl(HWND Parent, int pos_x, int pos_y, char* Text_, CO
 
 int MenuButton::AddItem(int ID, char* Text, BOOL is_Enable)
 {
-	int size, i;
+	int size;
 
 	if (Text == NULL) return 1;
 	if (ItemCount == 0 && MenuIt == NULL)
@@ -1062,7 +1055,7 @@ int MenuButton::SetMenuitemEnable(int pos, BOOL is_Enable)
 LRESULT  _stdcall ChkBoxProc(HWND hwd, int code, WPARAM wp, LPARAM lp)
 {
 	HDC hdc;
-	RECT wrc, crc;
+	RECT crc;
 	int cwidth, cheight, rx, ry, r_wh;
 	HBRUSH hbr;
 	HPEN hpn;
@@ -1072,14 +1065,14 @@ LRESULT  _stdcall ChkBoxProc(HWND hwd, int code, WPARAM wp, LPARAM lp)
 	DWORD chk_color;
 	DWORD hov_color;
 	DWORD text_color;
-	DWORD pos;
-	MPOINT* pt;
-	POINT p;
+	//DWORD pos;
+	//MPOINT* pt;
+	//POINT p;
 	char W_Text[250];
 	bool is_checked;
 	bool is_lmdown;
 	bool bl;
-	HWND hwnd;
+//	HWND hwnd;
 	CheckBox *CHKB;
 	TRACKMOUSEEVENT MEv;
 

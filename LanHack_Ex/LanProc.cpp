@@ -1031,7 +1031,7 @@ int AddPacketToTable802_11_Control(EHeader EthernetFrame, HWND PacketTable, Fram
 	char TypeE[] = "Control\0";
 	int i, Item;
 	int SubTypeCode;
-	PVOID P;
+	//PVOID P;
 	LVCOLUMN ListCol;
 
 	E802_11_Control_1* EH1;
@@ -1457,7 +1457,7 @@ int Add802_1_VlanTaggedFrameToTable(PVOID Frame, HWND PacketTable, int Item)
 		sprintf(ItemText, "	IETF TRILL Protocol");
 	else if (EType == 0x22F0)
 	{
-		if (MakeAVTP_ControlHead(&((unsigned char*)Frame)[4], &AVTP_CH) == 0)
+		if (MakeAVTP_ControlHead(&((unsigned char*)Frame)[4], &AVTP_CH, 12) == 0)
 		{
 			sprintf(ItemText, "AVTP");
 			
@@ -2640,6 +2640,9 @@ int InitTableSaveProc()
 
 	TSaveProc[5].EType = 0x22F3;
 	TSaveProc[5].Proc = &SaveTRILL_Frame;						//TRILL (Transparent Interconnection of Lots of Links)
+
+	TSaveProc[6].EType = 0x6002;
+	TSaveProc[6].Proc = &SaveDEC_MOP_Frame;						//Dec Mop Frame
 
 	TSaveProc[12].EType = 0x8100;
 	TSaveProc[12].Proc = &SaveIEE802_1qTagFrame;			//802.1q VLAN Tagged Frame(AVTP itp.....)

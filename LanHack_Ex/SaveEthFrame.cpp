@@ -527,7 +527,7 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 	if (DataSize >= 12)
 	{
-		 i = MakeAVTP_ControlHead(Frame, &AVTP_CH);
+		 i = MakeAVTP_ControlHead(Frame, &AVTP_CH, DataSize);
 
 		 if (i != 0) return i;
 
@@ -589,17 +589,17 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 
 				MAAP = (MAAP_Prot*)&AVTP_CH;
 
-				MakeShortNumber(MAAP->Data->MAAP_V1.RequestedCount, &ReqCount);
-				MakeShortNumber(MAAP->Data->MAAP_V1.ConflictCount, &ConflictCount);
+				MakeShortNumber(MAAP->MAAP_V1.RequestedCount, &ReqCount);
+				MakeShortNumber(MAAP->MAAP_V1.ConflictCount, &ConflictCount);
 
 				if (MAAP->MAAP_Size == 16 && MAAP->MAAP_Version == 1)
 				{
 					sprintf(&Text[strlen(Text)], "Request MAC : [%0.2X %0.2X %0.2X %0.2X %0.2X %0.2X] Requseted Count : [%d]\nConflict MAC : [%0.2X %0.2X %0.2X %0.2X %0.2X %0.2X] Conflict Count : [%d]\n\n", \
-						MAAP->Data->MAAP_V1.RequestedAddress[0], MAAP->Data->MAAP_V1.RequestedAddress[1], MAAP->Data->MAAP_V1.RequestedAddress[2], \
-						MAAP->Data->MAAP_V1.RequestedAddress[3], MAAP->Data->MAAP_V1.RequestedAddress[4], MAAP->Data->MAAP_V1.RequestedAddress[5], \
-						ReqCount, MAAP->Data->MAAP_V1.ConflictAddress[0], MAAP->Data->MAAP_V1.ConflictAddress[1], \
-						MAAP->Data->MAAP_V1.ConflictAddress[2], MAAP->Data->MAAP_V1.ConflictAddress[3], MAAP->Data->MAAP_V1.ConflictAddress[4], \
-						MAAP->Data->MAAP_V1.ConflictAddress[5], ConflictCount);
+						MAAP->MAAP_V1.RequestedAddress[0], MAAP->MAAP_V1.RequestedAddress[1], MAAP->MAAP_V1.RequestedAddress[2], \
+						MAAP->MAAP_V1.RequestedAddress[3], MAAP->MAAP_V1.RequestedAddress[4], MAAP->MAAP_V1.RequestedAddress[5], \
+						ReqCount, MAAP->MAAP_V1.ConflictAddress[0], MAAP->MAAP_V1.ConflictAddress[1], \
+						MAAP->MAAP_V1.ConflictAddress[2], MAAP->MAAP_V1.ConflictAddress[3], MAAP->MAAP_V1.ConflictAddress[4], \
+						MAAP->MAAP_V1.ConflictAddress[5], ConflictCount);
 				}
 				else sprintf(&Text[strlen(Text)], "Unkown MAAP Frame format\n\n");
 
@@ -984,7 +984,7 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize)
 							{
 								if (AVTP_SH.Data.MPEG2[i].PayloadLength > 0 && AVTP_SH.Data.MPEG2[i].PayloadLength <= 184)
 								{
-									sprintf(&Text[strlen(Text)], "----------MPEG2 Transport Stream Payload Data----------\n\n");
+									sprintf(&Text[strlen(Text)], "**********DANE(MPEG2 Transport Stream Payload Data)**********\n\n");
 									pl->write(Text, strlen(Text));
 									memset(Text, 0, 5000);
 
@@ -1070,7 +1070,7 @@ int SaveTRILL_Frame(PVOID Frame, fstream* pl, unsigned short DataSize)
 		{
 			memset(Text, 0, 5000);
 			
-			sprintf(Text, "----------Options----------\n\n");
+			sprintf(Text, "**********DANE(Options)**********\n\n");
 			pl->write(Text, strlen(Text));
 
 			WriteFileProtData(pl, (PVOID)trillProt.Options, trillProt.Head.OptionsLength);
@@ -1079,6 +1079,503 @@ int SaveTRILL_Frame(PVOID Frame, fstream* pl, unsigned short DataSize)
 		ReleaseTRILLHeader(&trillProt);
 	}
 
+
+	return 0;
+}
+
+int SavePPP_Frame(PVOID Frame, fstream* pl, unsigned short DataSize)
+{
+	PPP_Prot pppProt;
+	LCP_Prot lcpProt;
+	LCP_Options lcpOptions;
+	char Text[5000];
+	char ProtText[250];
+
+	if (Frame == NULL || pl == NULL)
+		return 1;
+
+	memset(Text, 0, 5000);
+
+	if (DataSize < 2)
+		sprintf(Text, "Unkown Frame Format....\n\n");
+	else
+	{
+		if (MakePPP_Header(Frame, &pppProt, DataSize) == 0)
+		{
+			sprintf(Text, "---------------------------------------------PPP(Point to Point Protocol Header)---------------------------------------------\n\n");
+
+			if (MakePPP_ProtText(pppProt.Protocol, ProtText, 250) == 0)
+				sprintf(&Text[strlen(Text)], "Protocol : %0.2X (%s)\n\n", pppProt.Protocol, ProtText);
+
+			if (pppProt.Protocol == 0xc021 || pppProt.Protocol == 0xc023 || pppProt.Protocol == 0xc025 || pppProt.Protocol == 0xc223)
+			{
+				if (MakeLCP_Header(pppProt.Information, &lcpProt, pppProt.InformationLength) != 0)
+				{
+					sprintf(Text, "Unkown LCP(Link Control Protocol) Frame Format....\n\n");
+					pl->write(Text, strlen(Text));
+					return 2;
+				}
+
+				memset(ProtText, 0, 250);
+
+				LoadStringA(Module, IDS_LCP_CODE_0 + lcpProt.Code, ProtText, 250);
+
+				sprintf(&Text[strlen(Text)], "Code : %0.2X (%s)\n\n", lcpProt.Code, ProtText);
+
+				sprintf(&Text[strlen(Text)], "Identifier : 0x%0.2X     Length : %d Bytes\n\n", lcpProt.Identifier, lcpProt.Length);
+
+				if (lcpProt.Code >= 1 && lcpProt.Code <= 4)		//LCP Options Header
+				{
+					if (MakeLCP_Options_Header(lcpProt.Data_Options, &lcpOptions, lcpProt.Length - 4) == 0)
+					{
+						if (lcpOptions.Type == 3 || lcpOptions.Type == 4)
+						{
+							if(lcpOptions.Type == 3)
+								sprintf(&Text[strlen(Text)], "LCP Options Type : 0x03(Authentication-Protocol)     Options Length : %d\n\n", \
+									lcpOptions.Length);
+							else
+								sprintf(&Text[strlen(Text)], "LCP Options Type : 0x04(Quality-Protocol)     Options Length : %d\n\n", \
+									lcpOptions.Length);
+
+							if (lcpOptions.Length > 4 && lcpOptions.Data != NULL)
+							{
+								sprintf(&Text[strlen(Text)],"**********DANE(LCP Options)**********\n\n");
+								pl->write(Text, strlen(Text));
+
+								WriteFileProtData(pl, lcpOptions.Data, DataSize - 10);
+
+								return 0;
+							}
+						}
+						else if (lcpOptions.Type == 5)		//LCP Options Magic-Number
+						{
+							sprintf(&Text[strlen(Text)], "LCP Options Type : 0x05(Magic-Number)     Options Length : %d     Magic Number : 0x%0.4X\n\n", \
+								lcpOptions.Length, lcpOptions.MagicNumber);
+						}
+					}
+					else
+					{
+						sprintf(&Text[strlen(Text)], "Bad options length in LCP(Link Control Protocol)....\n\n");
+						pl->write(Text, strlen(Text));
+						return 2;
+					}
+				}
+				else if (lcpProt.Code == Terminate_Request || lcpProt.Code == Terminate_Ack || lcpProt.Code == Code_Reject)	// LCP Terminate or Code (code = 5,6,7)
+				{
+					if(lcpProt.Code == Code_Reject)
+						sprintf(&Text[strlen(Text)], "**********DANE(LCP Code-Reject Protocol Binary Data)**********\n\n");
+					else if(lcpProt.Code == Terminate_Ack)
+						sprintf(&Text[strlen(Text)], "**********DANE(LCP Terimnate-Ack)**********\n\n");
+					else 
+						sprintf(&Text[strlen(Text)], "**********DANE(LCP Terimnate-Request)**********\n\n");
+
+
+					pl->write(Text, strlen(Text));
+
+					WriteFileProtData(pl, lcpProt.Data_Options, DataSize - 6);
+
+					return 0;
+				}
+				else if (lcpProt.Code == Protocol_Reject)
+				{
+					sprintf(&Text[strlen(Text)], "Reject Protocol : %0.2X\n\n",lcpProt.RejectProtocol);
+
+					sprintf(&Text[strlen(Text)], "**********DANE(Reject Protocol Information Data)**********\n\n");
+
+					pl->write(Text, strlen(Text));
+
+					WriteFileProtData(pl, lcpProt.Data_Options, DataSize - 8);
+
+					return 0;
+				}
+				else if (lcpProt.Code == Echo_Request || lcpProt.Code == Echo_Reply || lcpProt.Code == Discard_Request)	// LCP Echo or Discard (code = 9,10,11)
+				{
+					memset(ProtText, 0, 250);
+
+					_ui64toa_s((unsigned long long)lcpProt.MagicNumber, ProtText, 250, 10);
+
+					sprintf(&Text[strlen(Text)], "Magic Number : %s (%0.4X)\n\n", ProtText, lcpProt.MagicNumber);
+
+					sprintf(&Text[strlen(Text)], "**********DANE**********\n\n");
+
+					pl->write(Text, strlen(Text));
+
+					WriteFileProtData(pl, lcpProt.Data_Options, DataSize - 10);
+
+					return 0;
+				}
+			}
+			else
+			{
+				if (pppProt.Information != NULL && pppProt.InformationLength > 0)
+				{
+					sprintf(&Text[strlen(Text)], "**********DANE(Information Data)**********\n\n");
+
+					pl->write(Text, strlen(Text));
+
+					WriteFileProtData(pl, pppProt.Information, DataSize - 2);
+					
+					return 0;
+				}
+			}
+		}
+		else
+			sprintf(Text, "Unkown Frame Format....\n\n");
+	}
+
+	pl->write(Text, strlen(Text));
+
+	return 0;
+};
+
+int SaveDEC_MOP_Frame(PVOID Frame, fstream* pl, unsigned short DataSize)
+{
+	PPP_Prot pppProt;
+	LCP_Prot lcpProt;
+	DDCMP_Maint ddcmp_m;
+	MOP mop;
+	char Text[5000];
+	char ProtText[250];
+	char ul_s[100];
+	unsigned long ul;
+	int i;
+	unsigned short us;
+
+	if (Frame == NULL || pl == NULL)
+		return 1;
+
+	memset(Text, 0, 5000);
+
+	if (DataSize < 6)
+	{
+		sprintf(Text, "Unkown Frame Format....\n\n");
+
+		pl->write(Text, strlen(Text));
+
+		return 2;
+	}
+	else
+	{
+		if (MakePPP_Header(Frame, &pppProt, DataSize) != 0)
+		{
+			sprintf(Text, "Unkown PPP(Point to Point) Frame Format....\n\n");
+			pl->write(Text, strlen(Text));
+			return 2;
+		}
+
+		if (pppProt.Protocol == 0xC021)
+		{
+
+			if (MakeLCP_Header(pppProt.Information, &lcpProt, pppProt.InformationLength) != 0)
+			{
+				sprintf(Text, "Unkown LCP(Link Control Protocol) Frame Format....\n\n");
+				pl->write(Text, strlen(Text));
+				return 2;
+			}
+
+			if (lcpProt.Code >= 9 && lcpProt.Code <= 11)
+			{
+				sprintf(Text, "---------------------------------------------PPP(Point to Point Protocol Header)---------------------------------------------\n\n");
+
+				if (MakePPP_ProtText(pppProt.Protocol, ProtText, 250) == 0)
+					sprintf(&Text[strlen(Text)], "Protocol : %0.2X (%s)\n\n", pppProt.Protocol, ProtText);
+
+				sprintf(&Text[strlen(Text)], "---------------------------------------------LCP(Link Control Protocol) Header---------------------------------------------\n\n");
+
+				memset(ProtText, 0, 250);
+
+				LoadStringA(Module, IDS_LCP_CODE_0 + lcpProt.Code, ProtText, 250);
+
+				sprintf(&Text[strlen(Text)], "Code : %0.2X (%s)     ", lcpProt.Code, ProtText);
+
+				memset(ul_s, 0, 100);
+				_ultoa_s(lcpProt.MagicNumber, ul_s, 100, 10);
+
+				sprintf(&Text[strlen(Text)], "Identifier : 0x%0.2X     Length : %d Bytes     Magic Number : %s\n\n", lcpProt.Identifier, lcpProt.Length, ul_s);
+				
+				if (MakeDDCMP_Maint_Header(lcpProt.Data_Options, &ddcmp_m, lcpProt.Length) == 0)
+				{
+					sprintf(&Text[strlen(Text)], "---------------------------------------------DDCMP(Maintenance Messages) Header---------------------------------------------\n\n");
+
+					sprintf(&Text[strlen(Text)],"DLE - %d(0x%0.2X)     Count : %d Bytes     Flags : 0x%0.2X\n\n", ddcmp_m.DLE, ddcmp_m.DLE, ddcmp_m.Count, ddcmp_m.Flags);
+
+					sprintf(&Text[strlen(Text)], "Fill_1 : 0x%0.2X     Fill_2 : 0x%0.2X     ADDR : 0x%0.2X     BLCK1 : 0x%0.2X%0.2X     BLCK2 : 0x%0.2X%0.2X\n\n", ddcmp_m.Fill_1, ddcmp_m.Fill_2, ddcmp_m.ADDR,
+														ddcmp_m.BLCK_1[0], ddcmp_m.BLCK_1[2], ddcmp_m.BLCK_2[0], ddcmp_m.BLCK_2[2]);
+
+					if (MakeMOP_Header(ddcmp_m.Data, &mop, ddcmp_m.Count) == 0)
+					{
+						sprintf(&Text[strlen(Text)], "---------------------------------------------MOP(Maintenance Operation Protocol---------------------------------------------\n\n");
+						
+						switch (mop.Code)
+						{
+							case 0:
+
+							case 2:
+
+								mop.Code == 0 ? sprintf(&Text[strlen(Text)], "Code : 0 (Memory Load with Transfer Addres)\n\n") :
+									sprintf(&Text[strlen(Text)], "Code : 2 (Memory Load without Transfer Addres)\n\n");
+
+								sprintf(&Text[strlen(Text)], "LoadNum : %d     Load_Addres : 0x%0.2X%0.2X%0.2X%0.2X",
+									mop.MemLoad.LoadNum, mop.MemLoad.Loadaddr[0], mop.MemLoad.Loadaddr[1], mop.MemLoad.Loadaddr[2], mop.MemLoad.Loadaddr[3]);
+								
+								mop.Code == 0 ? sprintf(&Text[strlen(Text)], "     Transfer_Addres : 0x%0.2X%0.2X%0.2X%0.2X\n\n",
+									mop.MemLoad.TransferAddr[0], mop.MemLoad.TransferAddr[1], mop.MemLoad.TransferAddr[2], mop.MemLoad.TransferAddr[3]) :
+									sprintf(&Text[strlen(Text)], "\n\n");
+
+
+								if (mop.MemLoad.DataImage != NULL && mop.BufferSize > 0)
+								{
+									sprintf(&Text[strlen(Text)], "**********DANE(Image Data)**********\n\n");
+
+									pl->write(Text, strlen(Text));
+
+									WriteFileProtData(pl, mop.MemLoad.DataImage, mop.BufferSize);
+
+									return 0;
+								}
+
+								break;
+
+							case 4:
+
+								sprintf(&Text[strlen(Text)], "Code : 4 (Request Memory Dump [Examine Memory])\n\n");
+
+								sprintf(&Text[strlen(Text)], "Memory_Addres : 0x%0.2X%0.2X%0.2X%0.2X     Number of Locations : 0x%0.2X%0.2X\n\n", 
+									mop.MemDump.MemAddr[0], mop.MemDump.MemAddr[1], mop.MemDump.MemAddr[2], mop.MemDump.MemAddr[3], 
+									mop.MemDump.NumLocs[0], mop.MemDump.NumLocs[1]);
+
+								break;
+
+							case 6:
+
+								sprintf(&Text[strlen(Text)], "Code : 6 (Enter MOP Mode)\n\nPassword : 0x%0.2X%0.2X%0.2X%0.2X[%4s]",
+									mop.Enter_MOP_Mode.Password[0], mop.Enter_MOP_Mode.Password[1], mop.Enter_MOP_Mode.Password[2], mop.Enter_MOP_Mode.Password[3], mop.Enter_MOP_Mode.Password);
+
+								break;
+
+							case 8:
+
+								sprintf(&Text[strlen(Text)], "Code : 8 (Request Program)\n\n");
+
+								if(mop.RequestProgram.Devtype == 0)
+									sprintf(&Text[strlen(Text)], "Device Type : 0 (DPll)     ");
+								else if(mop.RequestProgram.Devtype == 2)
+									sprintf(&Text[strlen(Text)], "Device Type : 2 (DUll or DUVll)     ");
+								else if (mop.RequestProgram.Devtype == 4)
+									sprintf(&Text[strlen(Text)], "Device Type : 4 (DLll-E or DLVII-E )     ");
+								else if (mop.RequestProgram.Devtype == 6)
+									sprintf(&Text[strlen(Text)], "Device Type : 6 (DQll)     ");
+								else if (mop.RequestProgram.Devtype == 8)
+									sprintf(&Text[strlen(Text)], "Device Type : 8 (DAll-B)     ");
+								else if (mop.RequestProgram.Devtype == 10)
+									sprintf(&Text[strlen(Text)], "Device Type : 10 (DUPll)     ");
+								else if (mop.RequestProgram.Devtype == 12)
+									sprintf(&Text[strlen(Text)], "Device Type : 12 (DMCll)     ");
+								else if (mop.RequestProgram.Devtype == 20)
+									sprintf(&Text[strlen(Text)], "Device Type : 20 (DTE20)     ");
+								else if (mop.RequestProgram.Devtype == 32)
+									sprintf(&Text[strlen(Text)], "Device Type : 32 (KL8J)     ");
+								else 
+									sprintf(&Text[strlen(Text)], "Device Type : %d (Unkown)     ", mop.RequestProgram.Devtype);
+
+								sprintf(&Text[strlen(Text)], "MOP version : %d     ", mop.RequestProgram.MOP_Ver);
+
+								if (mop.RequestProgram.PGMType == 0)
+									sprintf(&Text[strlen(Text)], "PGMType : 0 (or omitted - secondary loader)\n\n");
+								else if (mop.RequestProgram.PGMType == 1)
+									sprintf(&Text[strlen(Text)], "PGMType : 1 (tertiary loader)\n\n");
+								else if (mop.RequestProgram.PGMType == 2)
+									sprintf(&Text[strlen(Text)], "PGMType : 2 (operating system)\n\n");
+								else
+									sprintf(&Text[strlen(Text)], "PGMType : %d (Unkown)\n\n", mop.RequestProgram.PGMType);
+
+								if (mop.RequestProgram.SoftID != NULL && mop.BufferSize > 0)
+								{
+									sprintf(&Text[strlen(Text)], "**********DANE(Request Program - Soft ID)**********\n\n");
+
+									pl->write(Text, strlen(Text));
+
+									WriteFileProtData(pl, mop.RequestProgram.SoftID, mop.BufferSize);
+
+									return 0;
+								}
+
+								break;
+
+							case 10 :
+
+								sprintf(&Text[strlen(Text)], "Code : 10 (Request Memory Load)\n\n");
+
+								sprintf(&Text[strlen(Text)], "Load Number : %d     Error : %d", mop.Request_MemoryLoad.LoadNum, mop.Request_MemoryLoad.Error);
+
+								switch (mop.Request_MemoryLoad.Error)
+								{
+									case 0 :
+										sprintf(&Text[strlen(Text)], "(No Error)");
+										break;
+									case 1 :
+										sprintf(&Text[strlen(Text)], "(Image data not properly loaded)");
+										break;
+
+									default: 
+										sprintf(&Text[strlen(Text)], "(Unkown Error)");
+										break;
+								}
+
+								break;
+
+							case 12 :
+
+								sprintf(&Text[strlen(Text)], "Code : 8 (Request Program)\n\n");
+
+								if (mop.ModeRunning.Devtype == 0)
+									sprintf(&Text[strlen(Text)], "Device Type : 0 (DPll)     ");
+								else if (mop.ModeRunning.Devtype == 2)
+									sprintf(&Text[strlen(Text)], "Device Type : 2 (DUll or DUVll)     ");
+								else if (mop.ModeRunning.Devtype == 4)
+									sprintf(&Text[strlen(Text)], "Device Type : 4 (DLll-E or DLVII-E )     ");
+								else if (mop.ModeRunning.Devtype == 6)
+									sprintf(&Text[strlen(Text)], "Device Type : 6 (DQll)     ");
+								else if (mop.ModeRunning.Devtype == 8)
+									sprintf(&Text[strlen(Text)], "Device Type : 8 (DAll-B)     ");
+								else if (mop.ModeRunning.Devtype == 10)
+									sprintf(&Text[strlen(Text)], "Device Type : 10 (DUPll)     ");
+								else if (mop.ModeRunning.Devtype == 12)
+									sprintf(&Text[strlen(Text)], "Device Type : 12 (DMCll)     ");
+								else if (mop.ModeRunning.Devtype == 20)
+									sprintf(&Text[strlen(Text)], "Device Type : 20 (DTE20)     ");
+								else if (mop.ModeRunning.Devtype == 32)
+									sprintf(&Text[strlen(Text)], "Device Type : 32 (KL8J)     ");
+								else
+									sprintf(&Text[strlen(Text)], "Device Type : %d (Unkown)     ", mop.ModeRunning.Devtype);
+
+								sprintf(&Text[strlen(Text)], "MOP version : %d     ", mop.ModeRunning.MOP_Ver);
+
+								MakeLONGNumber(&mop.ModeRunning.MemSize, &ul);
+								sprintf(&Text[strlen(Text)], "Memory Size : %d\n\n", ul);
+
+								sprintf(&Text[strlen(Text)], "Features :\n\n\tbit - 0 : %d (Multiblock load)\n\n\tbit - 1 : %d (Dump)\n\n\tbit - 2 : %d (Loopback)\n\n",
+									mop.ModeRunning.Features & 0x01, (mop.ModeRunning.Features & 0x02) >> 1, (mop.ModeRunning.Features & 0x04) >> 2);
+
+								break;
+
+							case 14 : 
+
+								sprintf(&Text[strlen(Text)], "Code : 14 ( Memory Dump Data [Examine Memory] )\n\n");
+
+								sprintf(&Text[strlen(Text)], "Memory Address : 0x%0.2X%0.2X%0.2X%0.2X\n\n", mop.MemDumpData.MemAddr[0], mop.MemDumpData.MemAddr[1],
+									mop.MemDumpData.MemAddr[2], mop.MemDumpData.MemAddr[3]);
+
+								if (mop.MemDumpData.DataImage != NULL && mop.BufferSize > 0)
+								{
+									sprintf(&Text[strlen(Text)], "**********DANE(Memory Dump Image Data)**********\n\n");
+
+									pl->write(Text, strlen(Text));
+
+									WriteFileProtData(pl, mop.MemDumpData.DataImage, mop.BufferSize);
+
+									return 0;
+								}
+
+								break;
+
+							case 16 :
+							case 18 :
+
+								sprintf(&Text[strlen(Text)], "Code : %d (Remote 11)\n\n", mop.Code);
+								
+								if (mop.Remote11.Message != NULL && mop.BufferSize > 0)
+								{
+									sprintf(&Text[strlen(Text)], "**********DANE(Remote 11 Message)**********\n\n");
+
+									pl->write(Text, strlen(Text));
+
+									WriteFileProtData(pl, mop.Remote11.Message, mop.BufferSize);
+
+									return 0;
+								}
+
+								break;
+
+							case 20 :
+								
+								sprintf(&Text[strlen(Text)], "Code : 20 (Parameter Load with Transfer Address)\n\n");
+
+								sprintf(&Text[strlen(Text)], "Load Number %d\n\n", mop.ParamLoad.LoadNum);
+
+								if (mop.ParamLoad.EntryParam != NULL && mop.ParamLoad.EntryParamCount > 0 && mop.BufferSize > 0)
+								{
+									for (i = 0; i < mop.ParamLoad.EntryParamCount; i++)
+									{
+										sprintf(&Text[strlen(Text)], "-----Param Entry %d-----\n\n", i + 1);
+
+										if (mop.ParamLoad.EntryParam[i].ParType != 2)
+										{
+											memset(ProtText, 0, 250);
+											memcpy(ProtText, mop.ParamLoad.EntryParam[i].ParValue, mop.ParamLoad.EntryParam[i].ParLength);
+
+											if (mop.ParamLoad.EntryParam[i].ParType == 1)
+												sprintf(&Text[strlen(Text)], "Param Type : 1     ASCII node name : %s\n\n", ProtText);
+											else if (mop.ParamLoad.EntryParam[i].ParType == 3)
+												sprintf(&Text[strlen(Text)], "Param Type : 3     ASCII host name : %s\n\n", ProtText);
+										}
+										else
+										{
+											if (mop.ParamLoad.EntryParam[i].ParLength == 2)
+											{
+												MakeShortNumber(mop.ParamLoad.EntryParam[i].ParValue, &us);
+												sprintf(&Text[strlen(Text)], "Param Type : 2     Binary node number : %d\n\n", us);
+											}
+											else
+												sprintf(&Text[strlen(Text)], "Param Type : 2     Binary node number : %d\n\n", mop.ParamLoad.EntryParam[i].ParValue[0]);
+										}
+										
+									}
+								}
+
+								break;
+
+							case 24 :
+
+								sprintf(&Text[strlen(Text)], "Code : 24 (Loopback Test)\n\n");
+
+								if (mop.LoopbackTest.LoopData != NULL && mop.BufferSize > 0)
+								{
+									sprintf(&Text[strlen(Text)], "**********DANE(Loopback Test)**********\n\n");
+
+									pl->write(Text, strlen(Text));
+
+									WriteFileProtData(pl, mop.LoopbackTest.LoopData, mop.BufferSize);
+
+									return 0;
+								}
+
+								break;
+
+
+							default :
+
+								sprintf(&Text[strlen(Text)], "Code : %d (Unkown MOP format)\n\n", mop.Code);
+
+								break;
+
+						}
+					}
+					else sprintf(&Text[strlen(Text)], "---------------Unkown MOP_Header Format------------\n\n");
+				}
+				else sprintf(&Text[strlen(Text)], "---------------Unkown DDCMP_Header Format------------\n\n");
+
+				pl->write(Text, strlen(Text));
+
+			}
+			else
+				return	SavePPP_Frame(Frame, pl, DataSize);
+		}
+		else
+			return	SavePPP_Frame(Frame, pl, DataSize);
+
+
+	}
 
 	return 0;
 }

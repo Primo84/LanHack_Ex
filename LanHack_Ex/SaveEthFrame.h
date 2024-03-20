@@ -31,6 +31,9 @@ int SaveAVTPFrame(PVOID Frame, fstream* pl, unsigned short DataSize);
 
 int SaveTRILL_Frame(PVOID Frame, fstream* pl, unsigned short DataSize);
 
+int SavePPP_Frame(PVOID Frame, fstream* pl, unsigned short DataSize);
+
+int SaveDEC_MOP_Frame(PVOID Frame, fstream* pl, unsigned short DataSize);
 
 /*                           
 

@@ -14,8 +14,7 @@ PacketBuff MPRecv_Buf;
 PacketBuff MPSend_Buf;
 PacketBuff RecvProt_Buf;
 
-HMODULE HM;
-
+EHeader EH;
 
 LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 {
@@ -26,6 +25,7 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 	WNDCLASS ClassInfo;
 	TRACKMOUSEEVENT MouseEv;
 	char Text_[100];
+	char UT[50];
 	ULONG OPMode;
 
 	switch (code)
@@ -61,6 +61,13 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 		ReleaseCapture();
 		break;
 	}
+
+	case WM_RBUTTONUP:
+	{
+		RecivePacket(EH);
+		break;
+	}
+
 	case WM_MOUSEMOVE:
 	{
 		if (left_up == true) break;
@@ -132,7 +139,9 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 			//WaitForSingleObject(MPRecv_Buf.SpinLock, INFINITE);
 
 			memset(Text_, 0, 100);
-			sprintf(Text_, "Pakiety Odebrane : %d", MPRecv_Buf.TotalCount);
+			memset(UT, 0, 50);
+			_ui64toa(MPRecv_Buf.TotalCount, UT, 10);
+			sprintf(Text_, "Pakiety Odebrane : %s", UT);
 			ReciveTextTable->SetText(Text_);
 
 			//SetEvent(MPRecv_Buf.SpinLock);
@@ -142,7 +151,9 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 			//WaitForSingleObject(MPSend_Buf.SpinLock, INFINITE);
 
 			memset(Text_, 0, 100);
-			sprintf(Text_, "Pakiety Wyslane : %d", MPSend_Buf.TotalCount);
+			memset(UT, 0, 50);
+			_ui64toa(MPSend_Buf.TotalCount, UT, 10);
+			sprintf(Text_, "Pakiety Wyslane : %s", UT);
 			SendTextTable->SetText(Text_);
 
 			//SetEvent(MPSend_Buf.SpinLock);
@@ -152,7 +163,9 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 			//WaitForSingleObject(RecvProt_Buf.SpinLock, INFINITE);
 
 			memset(Text_, 0, 100);
-			sprintf(Text_, "Pakiety Protokolu : %d", RecvProt_Buf.TotalCount);
+			memset(UT, 0, 50);
+			_ui64toa(RecvProt_Buf.TotalCount, UT, 10);
+			sprintf(Text_, "Pakiety Protokolu : %s", UT);
 			ProtTextTable->SetText(Text_);
 
 			//SetEvent(RecvProt_Buf.SpinLock);
@@ -212,7 +225,7 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 		{
 			if (AdapterOp)
 			{
-				if (MessageBox(handle, L"Adapter jest juz polaczony. Wcelu polaczenia nowego musisz najpierw rozlaczyc.\nCzy chcesz rozlaczyc adapter ?", L"K o m u n i k a t", MB_YESNO) == IDYES)
+				if (MessageBox(handle, L"Adapter jest juz połączony. Wcelu połączenia nowego musisz najpierw rozłączyc.\nCzy chcesz rozłączyc adapter ?", L"K o m u n i k a t", MB_YESNO) == IDYES)
 				{
 					if (CloseAdapter() == 0)
 					{
@@ -289,21 +302,21 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 								if (ret == 0)
 								{
 									Adapters[i].CurrentMode = OPM;
-									MessageBox(WindowHandle, L"Tryb pracy zosta� zmieniony pomy�lnie", L"Wiadomo��", MB_OK);
+									MessageBox(WindowHandle, L"Tryb pracy został zmieniony pomyślnie", L"Wiadomość", MB_OK);
 								}
 								else if (ret == 4)
-									MessageBox(WindowHandle, L"Przed zmian� tego trybu pracy nale�y roz��czy� si� z sieci� WiFi", L"Wiadomo��", MB_OK);
+									MessageBox(WindowHandle, L"Przed zmianą tego trybu pracy należy rozłączyć się z siecią WiFi", L"Wiadomość", MB_OK);
 								else
-									MessageBox(WindowHandle, L"Nie uda�o si� zmieni� trybu pracy karty sieciowej", L"Wiadomo��", MB_OK);
+									MessageBox(WindowHandle, L"Nie udało się zmienić trybu pracy karty sieciowej", L"Wiadomość", MB_OK);
 
 
 							}
 						}
 						else
-							MessageBox(WindowHandle, L"Nie mo�na pobra� informacji o karcie sieciowej", L"Wiadomosc", MB_OK);
+							MessageBox(WindowHandle, L"Nie można pobrać informacji o karcie sieciowej", L"Wiadomosc", MB_OK);
 					}
 					else
-						MessageBox(WindowHandle, L"Wybrana karta sieciowa nie wspiera tryb�w pracy.\nTylko karty WiFi obs�uguj� tryby pracy ", L"Wiadomosc", MB_OK);
+						MessageBox(WindowHandle, L"Wybrana karta sieciowa nie wspiera trybów pracy.\nTylko karty WiFi obsługuje tryby pracy ", L"Wiadomosc", MB_OK);
 				}
 			}
 			break;
@@ -331,7 +344,7 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 			{
 				if (MPReciveOp || MPSendOp)
 				{
-					MessageBox(handle, L"Miniporty sa juz w stanie nasluchiwania", L"K o  m u n i k a t", MB_OK);
+					MessageBox(handle, L"Miniporty są juz w stanie nasluchiwania", L"K o  m u n i k a t", MB_OK);
 					break;
 				}
 				i = SetMiniportDialog(WindowHandle, Module_Instance, Miniport, Miniport[0].miniportCount);
@@ -1067,7 +1080,7 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 			i = SaveTable(&RecvProt_Buf, WindowHandle, Module_Instance);
 
 			if (i == 2)
-				MessageBox(WindowHandle, L"Tabela pakiet�w jest pusta", L"Wiadomo��", MB_OK);
+				MessageBox(WindowHandle, L"Tabela pakietów jest pusta", L"Wiadomość", MB_OK);
 
 			break;
 		}
@@ -1077,7 +1090,7 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 			i = SaveTable(&MPRecv_Buf, WindowHandle, Module_Instance);
 
 			if (i == 2)
-				MessageBox(WindowHandle, L"Tabela pakiet�w jest pusta", L"Wiadomo��", MB_OK);
+				MessageBox(WindowHandle, L"Tabela pakietów jest pusta", L"Wiadomość", MB_OK);
 
 			break;
 		}
@@ -1086,7 +1099,7 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 			i = SaveTable(&MPSend_Buf, WindowHandle, Module_Instance);
 
 			if (i == 2)
-				MessageBox(WindowHandle, L"Tabela pakiet�w jest pusta", L"Wiadomo��", MB_OK);
+				MessageBox(WindowHandle, L"Tabela pakietów jest pusta", L"Wiadomość", MB_OK);
 
 			break;
 		}
@@ -1098,12 +1111,82 @@ LRESULT CALLBACK WndProc(HWND handle, int code, WPARAM wp, LPARAM lp)
 	return 0;
 }
 
+typedef struct _Buff
+{
+	unsigned char B[500];
+
+}Buff, * PBuff;
+
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_show)
 {
 	WNDCLASSEX MainClass;
 	int i;
 	HBITMAP Background;
 
+	EHead_802_3 E802_3;
+
+	PPP_Prot pppProt;
+	LCP_Prot lcpProt;
+
+	PBuff Bf;
+	int BufferSize;
+
+	unsigned char MD[6] = { 0xB4, 0x8C, 0x9D, 0x54, 0x8D, 0x75 };
+	unsigned char MZ[6] = { 0x58, 0x11, 0x22, 0x3B, 0x9C, 0x6A };
+	unsigned char EType[2] = { 0x60, 0x02 };
+
+	
+	unsigned char Buffer[500] = {/*ppp_header*/0xC0, 0x21, /*lcp_header*/0x09, 0xA7, 0x00, 0x18, 
+									0x45, 0xF1, 0xAC, 0x09, /*ddcmp_header*/0x90, 0x00, 0x1B, 0x00,
+									0x00, 0xCE, 0xAA, 0xBB, /*mop_header*/ 0x18,'D', 'A', 'T', 'A', '1',
+									/*ddcmp_blck2_field*/ 0xBB, 0xAA}; // ---------38 b
+
+	//unsigned char Buf[500];
+	//int size;
+
+	//DDCMP_Control ddcmp;
+	//MOP  mop;
+
+	////memcpy(&Buffer1[1], dane, 8);
+
+	//MakeDDCMP_Control_Header(Buffer, &ddcmp, 8);
+
+	//size = 500;
+	//memset(Buf, 0, 500);
+
+	//ConvertDDCMP_Control_HeaderToBuffer(&ddcmp, Buf, &size);
+
+
+
+
+	//for (i = 0; i < 500; i++)
+	//{
+	//	if (Buf[i] != Buffer[i])
+	//	{
+	//		Buf[i] = Buffer[i];
+	//	}
+	//}
+
+
+	memcpy(E802_3.MAC_Docelowy, MD, 6);
+	memcpy(E802_3.MAC_Zrodlowy, MZ, 6);
+	memcpy(E802_3.Typ, EType, 2);
+
+	EH.Medium = Medium802_3;
+	EH.MediumType = PhysicalMedium802_3;
+
+	memset(EH.NetworkData, 0, 5000);
+	memcpy(EH.NetworkData, &E802_3, 14);
+
+	memcpy(&EH.NetworkData[14], Buffer,26);
+
+//	MakePPP_Header(Buffer, &pppProt, 22);
+
+//	MakeLCP_Header(pppProt.Information, &lcpProt, pppProt.InformationLength);
+
+	EH.DataSize = 40;
+
+	
 	Module_Instance = instance;
 	Icon_Add = false;
 	memset(&MainClass, 0, sizeof(WNDCLASSEX));
@@ -1114,7 +1197,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 	MainClass.lpfnWndProc = (WNDPROC)&WndProc;
 	MainClass.hCursor = LoadCursor(NULL, IDC_ARROW);
 	MainClass.hbrBackground = CreatePatternBrush(LoadBitmapA(instance, MAKEINTRESOURCEA(IDB_BACK)));
-
 
 	InitCommonControls();
 
@@ -1134,7 +1216,15 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_inst, LPSTR str, int cmd_s
 
 			Miniport = GetMiniports(&MiniportCount);
 			ShowWindow(WindowHandle, SW_SHOWNORMAL);
+		
+			/*
+						memcpy(&RecvProt_Buf.Buffer[0], &EH, sizeof(EHeader));
+						RecvProt_Buf.PIndex = 1;
+						RecvProt_Buf.TotalCount = 1;
 
+
+						SaveTable(&RecvProt_Buf, WindowHandle, Module_Instance);
+			*/
 
 			while (GetMessage(&message, NULL, 0, 0))
 			{
@@ -1468,7 +1558,7 @@ int InitApplication()
 		ListCol.iSubItem = i;
 		ListCol.pszText = ColName;
 		memset(ColName, 0, 25 * sizeof(wchar_t));
-		LoadString(Module_Instance, CodeStr, ColName, 25 * sizeof(wchar_t));
+		LoadString(Module_Instance, CodeStr, ColName, 25);
 		ListView_InsertColumn(ListCapture, i, &ListCol);
 		CodeStr++;
 	}

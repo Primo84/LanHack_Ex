@@ -466,6 +466,27 @@ IDS_LLC_23						"Ungermann-Bass"
 IDS_LLC_24						"OSI Connectionless-mode Network Service"
 
 
+
+/*
+
+ -------------------------------------------Code Type LCP(Link Control Protocol)--------------------------------------------------------------------
+
+*/
+
+IDS_LCP_CODE_0                  "Unkown"
+IDS_LCP_CODE_1                  "Configure_Request"
+IDS_LCP_CODE_2                  "Configure_Ack"
+IDS_LCP_CODE_3                  "Configure_Nak"
+IDS_LCP_CODE_4                  "Configure_Reject"
+IDS_LCP_CODE_5                  "Terminate_Request"
+IDS_LCP_CODE_6                  "Terminate_Ack"
+IDS_LCP_CODE_7                  "Code_Reject"
+IDS_LCP_CODE_8                  "Protocol_Reject"
+IDS_LCP_CODE_9                  "Echo_Request"
+IDS_LCP_CODE_10                 "Echo_Reply"
+IDS_LCP_CODE_11                 "Discard_Request"
+
+
 END
 
 

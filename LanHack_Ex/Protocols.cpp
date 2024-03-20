@@ -297,11 +297,14 @@ int MakeAVTP_CIP_SPH_Header(PVOID FrameByte, CIP_61883_H* CIP_H, SPH* sph)
 	return 0;
 }
 
-int MakeAVTP_ControlHead(PVOID Frame, AVTP_ControlHead* AVTP_CH)
+int MakeAVTP_ControlHead(PVOID Frame, AVTP_ControlHead* AVTP_CH, int BufferSize)
 {
 	unsigned long W;
 
 	if (Frame == NULL || AVTP_CH == NULL) return 1;
+
+	if (BufferSize < 12)
+		return 2;
 
 	MakeLONGNumber(Frame, &W);
 
@@ -321,7 +324,10 @@ int MakeAVTP_ControlHead(PVOID Frame, AVTP_ControlHead* AVTP_CH)
 
 	memcpy(AVTP_CH->StreamID, &(((unsigned char*)Frame)[4]), 8);
 
-	AVTP_CH->Data = ((unsigned char*)Frame)+12;
+	if (BufferSize > 12)
+		AVTP_CH->Data = ((unsigned char*)Frame) + 12;
+
+	else AVTP_CH->ControlDataSize = NULL;
 
 	return 0;
 }
@@ -1786,20 +1792,30 @@ int ReleaseTRILLHeader(TRILL_Prot* trillProt)
 int ConvertTRILLHeaderToBuffer(TRILL_Prot* trillProt, PVOID Buffer, int *BufferSize)
 {
 	unsigned short sVal;
+	int DataOffset;
 	int i, j;
 
 	if (trillProt == NULL || Buffer == NULL || BufferSize == NULL)
 		return 1;
 
+	DataOffset = 6;
+
 	if (trillProt->Options != NULL && trillProt->Head.OptionsLength > 0 )
 	{
 		if (*BufferSize < 6 + trillProt->Head.OptionsLength)
+		{
+			*BufferSize = 6 + trillProt->Head.OptionsLength;
 			return 2;
-
+		}
 		memcpy(&((unsigned char*)Buffer)[6], trillProt->Options, trillProt->Head.OptionsLength);
+		DataOffset += trillProt->Head.OptionsLength;
+
 	}
 	else if (*BufferSize < 6)
+	{
+		*BufferSize = 6;
 		return 2;
+	}
 
 	sVal = 0;
 
@@ -1814,6 +1830,1057 @@ int ConvertTRILLHeaderToBuffer(TRILL_Prot* trillProt, PVOID Buffer, int *BufferS
 
 	memcpy(&((unsigned char*)Buffer)[2], trillProt->EgressNickname, 2);
 	memcpy(&((unsigned char*)Buffer)[4], trillProt->IngressNickname, 2);
+
+	*BufferSize = DataOffset;
+
+	return 0;
+}
+
+int MakePPP_ProtText(unsigned short PPP_Protocol, char* Text, int TextLength)
+{
+	if (Text == NULL || TextLength < 50)
+		return 1;
+
+	memset(Text, 0, TextLength);
+
+	if (PPP_Protocol == 0x0001)
+		sprintf(Text, "Padding Protocol");
+	else if(PPP_Protocol >=0x0003 && PPP_Protocol <=0x001f)
+		sprintf(Text, "Reserved (transparency inefficient)");
+	else if (PPP_Protocol == 0x0007d)
+		sprintf(Text, "Reserved (Control Escape)");
+	else if (PPP_Protocol == 0x00cf)
+		sprintf(Text, "Reserved (PPP NLPID)");
+	else if (PPP_Protocol == 0x00ff)
+		sprintf(Text, "Reserved (compression inefficient)");
+	else if (PPP_Protocol >= 0x8001 && PPP_Protocol <= 0x801f)
+		sprintf(Text, "Unussed");
+	else if (PPP_Protocol == 0x807d)
+		sprintf(Text, "Unussed");
+	else if (PPP_Protocol == 0x80cf)
+		sprintf(Text, "Unussed");
+	else if (PPP_Protocol == 0x80ff)
+		sprintf(Text, "Unussed");
+
+	else if (PPP_Protocol == 0xc021)
+		sprintf(Text, "Link Control Protocol");
+	else if (PPP_Protocol == 0xc023)
+		sprintf(Text, "Password Authentication Protocol");
+	else if (PPP_Protocol == 0xc025)
+		sprintf(Text, "Link Quality Report");
+	else if (PPP_Protocol == 0xc223)
+		sprintf(Text, "Challenge Handshake Authentication Protocol");
+	else
+		sprintf(Text, "Unkown Protocol Type.....");
+
+	return 0;
+}
+
+
+int MakeDDCMP_Maint_Header(PVOID Frame, DDCMP_Maint * DDCMP_M, int DataSize)
+{
+	unsigned short us;
+	unsigned char *byte;
+	int dataSize;
+
+	if (Frame == NULL || DDCMP_M == NULL) return 1;
+	if (DataSize < 10) return 2;
+
+	byte = (unsigned char*)Frame;
+
+	if (byte[0] != 0x90)
+		return 3;
+
+	DDCMP_M->DLE = byte[0];
+
+	MakeShortNumber(&byte[1], &us);
+
+	DDCMP_M->Count = us >> 2;
+	DDCMP_M->Flags = us & 0x3;
+
+	DDCMP_M->Fill_1 = byte[3];
+	DDCMP_M->Fill_2 = byte[4];
+	DDCMP_M->ADDR = byte[5];
+
+	memcpy(DDCMP_M->BLCK_1, &byte[6], 2);
+
+	if (DDCMP_M->Count > 0 && (DataSize - 10) >= DDCMP_M->Count)
+	{
+		DDCMP_M->Data = (unsigned char* )malloc(DDCMP_M->Count);
+
+		memcpy(DDCMP_M->Data, &byte[8], DDCMP_M->Count);
+
+		memcpy(DDCMP_M->BLCK_2, &byte[8 + DDCMP_M->Count], 2);
+	}
+	else memcpy(DDCMP_M->BLCK_2, &byte[8], 2);
+
+	return 0;
+}
+
+
+
+
+int ConvertDDCMP_Maint_HeaderToBuffer(DDCMP_Maint * DDCMP_M, PVOID Buffer, int * BufferSize)
+{
+	int Offset;
+	unsigned char *byte;
+	unsigned short us;
+
+	if (DDCMP_M == NULL || Buffer == NULL || BufferSize == NULL) return 1;
+
+	if (DDCMP_M->Count > 0 && DDCMP_M->Data != NULL)
+	{
+		if (*BufferSize < DDCMP_M->Count + 10)
+		{
+			*BufferSize = DDCMP_M->Count + 10;
+			return 2;
+		}
+	}
+	else if (*BufferSize < 10)
+	{
+		*BufferSize = 10;
+		return 2;
+	}
+
+	if (DDCMP_M->DLE != 0x90)
+		return 3;
+
+	Offset = 0;
+
+	byte = (unsigned char*)Buffer;
+
+	byte[0] = DDCMP_M->DLE;
+
+	us = DDCMP_M->Count << 2;
+	us = us | DDCMP_M->Flags;
+
+	byte[1] = ((unsigned char*)&us)[1];
+	byte[2] = ((unsigned char*)&us)[0];
+
+	memcpy(&byte[3], &DDCMP_M->Fill_1, 5);
+
+	Offset += 8;
+
+	if (DDCMP_M->Count > 0 && DDCMP_M->Data != NULL)
+	{
+		memcpy(&byte[8], DDCMP_M->Data, DDCMP_M->Count);
+		Offset += DDCMP_M->Count;
+	}
+
+	memcpy(&byte[Offset], DDCMP_M->BLCK_2, 2);
+
+	Offset += 2;
+
+	*BufferSize = Offset;
+
+	return 0;
+}
+
+int ReleaseDDCMP_Maint_Header(DDCMP_Maint * DDCMP_M)
+{
+	if (DDCMP_M == NULL) return 1;
+
+	if (DDCMP_M->Data != NULL)
+		delete(DDCMP_M->Data);
+
+	return 0;
+}
+
+int MakeDDCMP_Data_Header(PVOID Frame, DDCMP_Data* DDCMP_D, int DataSize)
+{
+	unsigned short us;
+	unsigned char* byte;
+	int dataSize;
+
+	if (Frame == NULL || DDCMP_D == NULL) return 1;
+	if (DataSize < 10) return 2;
+
+	byte = (unsigned char*)Frame;
+
+	if (byte[0] != 0x81)
+		return 3;
+
+	DDCMP_D->SOH = byte[0];
+
+	MakeShortNumber(&byte[1], &us);
+
+	DDCMP_D->Count = us >> 2;
+	DDCMP_D->Flags = us & 0x3;
+
+	DDCMP_D->Resp = byte[3];
+	DDCMP_D->Num = byte[4];
+	DDCMP_D->ADDR = byte[5];
+
+	memcpy(DDCMP_D->BLCK_1, &byte[6], 2);
+
+	if (DDCMP_D->Count > 0 && (DataSize - 10) >= DDCMP_D->Count)
+	{
+		DDCMP_D->Data = (unsigned char*)malloc(DDCMP_D->Count);
+
+		memcpy(DDCMP_D->Data, &byte[8], DDCMP_D->Count);
+
+		memcpy(DDCMP_D->BLCK_2, &byte[8 + DDCMP_D->Count], 2);
+	}
+	else memcpy(DDCMP_D->BLCK_2, &byte[8], 2);
+
+	return 0;
+}
+
+int ConvertDDCMP_Data_HeaderToBuffer(DDCMP_Data* DDCMP_D, PVOID Buffer, int* BufferSize)
+{
+	int Offset;
+	unsigned char* byte;
+	unsigned short us;
+
+	if (DDCMP_D == NULL || Buffer == NULL || BufferSize == NULL) return 1;
+
+	if (DDCMP_D->Count > 0 && DDCMP_D->Data != NULL)
+	{
+		if (*BufferSize < DDCMP_D->Count + 10)
+		{
+			*BufferSize = DDCMP_D->Count + 10;
+			return 2;
+		}
+	}
+	else if (*BufferSize < 10)
+	{
+		*BufferSize = 10;
+		return 2;
+	}
+
+	if (DDCMP_D->SOH != 0x81)
+		return 3;
+
+	Offset = 0;
+
+	byte = (unsigned char*)Buffer;
+
+	byte[0] = DDCMP_D->SOH;
+
+	us = DDCMP_D->Count << 2;
+	us = us | DDCMP_D->Flags;
+
+	byte[1] = ((unsigned char*)&us)[1];
+	byte[2] = ((unsigned char*)&us)[0];
+
+	memcpy(&byte[3], &DDCMP_D->Resp, 5);
+
+	Offset += 8;
+
+	if (DDCMP_D->Count > 0 && DDCMP_D->Data != NULL)
+	{
+		memcpy(&byte[8], DDCMP_D->Data, DDCMP_D->Count);
+		Offset += DDCMP_D->Count;
+	}
+
+	memcpy(&byte[Offset], DDCMP_D->BLCK_2, 2);
+
+	Offset += 2;
+
+	*BufferSize = Offset;
+
+	return 0;
+}
+
+int ReleaseDDCMP_Data_Header(DDCMP_Data * DDCMP_D)
+{
+	if (DDCMP_D == NULL) return 1;
+
+	if (DDCMP_D->Data != NULL)
+		delete(DDCMP_D->Data);
+
+	return 0;
+}
+
+
+int MakeDDCMP_Control_Header(PVOID Frame, DDCMP_Control * DDCMP_C, int DataSize)
+{
+	unsigned char* byte;
+	int dataSize;
+
+	if (Frame == NULL || DDCMP_C == NULL) return 1;
+	if (DataSize < 8) return 2;
+
+	byte = (unsigned char*)Frame;
+
+	if (byte[0] != 0x05)
+		return 3;
+
+	DDCMP_C->ENQ = byte[0];
+	DDCMP_C->Type = byte[1];
+	DDCMP_C->Subtype = byte[2] >> 2;
+	DDCMP_C->Flags = byte[2] | 0x3;
+
+	memcpy(&DDCMP_C->Recvr, &byte[3], 5);
+
+	return 0;
+}
+
+int ConvertDDCMP_Control_HeaderToBuffer(DDCMP_Control * DDCMP_C, PVOID Buffer, int * BufferSize)
+{
+	unsigned char *byte;
+
+	if (DDCMP_C == NULL || Buffer == NULL || BufferSize == NULL) return 1;
+
+	if (*BufferSize < 8) return 2;
+
+	if (DDCMP_C->ENQ != 0x05) return 3;
+
+	byte = (unsigned char*)Buffer;
+
+	memcpy(byte, &DDCMP_C->ENQ, 2);
+
+	byte[2] = DDCMP_C->Subtype << 2;
+	byte[2] |= DDCMP_C->Flags;
+
+	memcpy(&byte[3], &DDCMP_C->Recvr, 5);
+
+	return 0;
+}
+
+int MakeMOP_Header(PVOID Frame, MOP* mop, int DataSize)
+{
+	unsigned char* byte;
+	int ImgSize;
+	int index;
+	unsigned char paramL;
+	int i;
+
+	if (Frame == NULL || mop == NULL) return 1;
+	if (DataSize < 0) return 2;
+
+	byte = (unsigned char*)Frame;
+
+	memset(mop, 0, sizeof(MOP));
+
+	mop->Code = byte[0];
+
+	switch (mop->Code)
+	{
+		case 0:
+
+			if (DataSize < 6) return 3;
+
+			mop->MemLoad.LoadNum = byte[1];
+			memcpy(mop->MemLoad.Loadaddr, &byte[2], 4);
+
+			if (DataSize > 6)
+			{
+				if (DataSize > 10)
+				{
+					ImgSize = DataSize - 10;
+					mop->MemLoad.DataImage = (unsigned char*)malloc(ImgSize);
+					memcpy(mop->MemLoad.DataImage, &byte[6], ImgSize);
+					memcpy(mop->MemLoad.TransferAddr, &byte[6 + ImgSize], 4);
+					mop->BufferSize = ImgSize;
+				}
+				else if (DataSize == 10)
+					memcpy(mop->MemLoad.TransferAddr, &byte[6], 4);
+			}
+
+			break;
+
+		case 2:
+
+			if (DataSize < 6) return 3;
+
+			mop->MemLoad.LoadNum = byte[1];
+			memcpy(mop->MemLoad.Loadaddr, &byte[2], 4);
+
+			if (DataSize > 6)
+			{
+				ImgSize = DataSize - 6;
+				mop->MemLoad.DataImage = (unsigned char*)malloc(ImgSize);
+				memcpy(mop->MemLoad.DataImage, &byte[6], ImgSize);
+				mop->BufferSize = ImgSize;
+			}
+
+			break;
+		
+		case 4:
+
+			if (DataSize != 7) return 3;
+
+			memcpy(&mop->MemDump.MemAddr[0], &byte[1], 6);
+
+			break;
+
+		case 6:
+
+			if (DataSize != 5) return 3;
+
+			memcpy(&mop->Enter_MOP_Mode.Password[0], &byte[1], 4);
+
+			break;
+
+		case 8:
+
+			if (DataSize < 4) return 3;
+
+			memcpy(&mop->RequestProgram.Devtype, &byte[1], 3);
+			if (DataSize > 4)
+			{
+				ImgSize = DataSize - 4;
+				mop->RequestProgram.SoftID = (unsigned char*)malloc(ImgSize);
+				memcpy(mop->RequestProgram.SoftID, &byte[4], ImgSize);
+				mop->BufferSize = ImgSize;
+			}
+
+			break;
+
+		case 10:
+
+			if (DataSize != 3) return 3;
+			memcpy(&mop->Request_MemoryLoad, &byte[1], 2);
+
+			break;
+		
+		case 12:
+
+			if (DataSize != 8) return 3;
+
+			memcpy(&mop->ModeRunning, &byte[1], 7);
+
+			break;
+
+		case 14:
+
+			if (DataSize < 5) return 3;
+
+			memcpy(mop->MemDumpData.MemAddr, &byte[1], 4);
+
+			if (DataSize > 5)
+			{
+				ImgSize = DataSize - 5;
+				mop->MemDumpData.DataImage = (unsigned char*)malloc(ImgSize);
+				memcpy(mop->MemDumpData.DataImage, &byte[5], ImgSize);
+				mop->BufferSize = ImgSize;
+			}
+
+			break;
+
+		case 16:
+		case 18:
+
+			if (DataSize > 1)
+			{
+				ImgSize = DataSize - 1;
+				mop->Remote11.Message = (unsigned char*)malloc(ImgSize);
+				memcpy(mop->Remote11.Message, &byte[1], ImgSize);
+				mop->BufferSize = ImgSize;
+			}
+
+			break;
+
+		case 20:
+
+			if (DataSize < 6) return 3;
+
+			mop->ParamLoad.LoadNum = byte[1];
+
+			if (DataSize > 9)
+			{
+				index = 2;
+
+				do
+				{
+					paramL = byte[index + 1];
+
+					if (paramL < 0) return 4;
+
+					if (byte[index] >= 1 && byte[index] <= 3)
+					{
+						if (byte[index] == 2)
+						{
+							if(paramL > 2) return 5;
+						}
+						else if (paramL > 6) return 5;
+					}
+					else return 4;
+
+					index += paramL + 2;
+
+					if (index > DataSize - 5)
+						break;
+
+					mop->ParamLoad.EntryParamCount++;
+
+				} while (byte[index] != 0);
+
+				index++;
+
+				if (index <= DataSize - 4)
+					memcpy(mop->ParamLoad.TransferAddr, &byte[index], 4);
+
+				else return 6;
+
+				if (mop->ParamLoad.EntryParamCount > 0)
+				{
+					mop->ParamLoad.EntryParam = (ParamEntry*)malloc(sizeof(ParamEntry) * mop->ParamLoad.EntryParamCount);
+					memset(mop->ParamLoad.EntryParam, 0, sizeof(ParamEntry) * mop->ParamLoad.EntryParamCount);
+
+					index = 2;
+					mop->BufferSize = 0;
+
+					for (i = 0; i < mop->ParamLoad.EntryParamCount; i++)
+					{
+						mop->ParamLoad.EntryParam[i].ParType = byte[index];
+						mop->ParamLoad.EntryParam[i].ParLength = byte[index + 1];
+
+						mop->BufferSize += mop->ParamLoad.EntryParam[i].ParLength + 2;
+
+						memcpy(mop->ParamLoad.EntryParam[i].ParValue, &byte[index + 2], mop->ParamLoad.EntryParam[i].ParLength);
+
+						index += mop->ParamLoad.EntryParam[i].ParLength + 2;
+					}
+
+				}
+			}
+			else
+			{
+				memcpy(mop->ParamLoad.TransferAddr, &byte[2], 4);
+				mop->BufferSize = 6;
+			}
+
+			break;
+
+		case 24:
+
+			if (DataSize > 1)
+			{
+				mop->LoopbackTest.LoopData = (unsigned char*)malloc(DataSize - 1);
+				memcpy(mop->LoopbackTest.LoopData, &byte[1], DataSize - 1);
+				mop->BufferSize = DataSize - 1;
+			}
+
+			break;
+
+
+		default: return 7;
+
+	}
+
+	return 0;
+}
+
+int ConvertMOP_HeaderToBuffer(MOP* mop, PVOID Buffer, int* BufferSize)
+{
+	unsigned char *byte;
+	int Offset;
+	int ManSize;
+	int i;
+
+	if (mop == NULL || Buffer == NULL || BufferSize == NULL) return 1;
+
+	byte = (unsigned char*)Buffer;
+
+	byte[0] = mop->Code;
+	Offset = 1;
+
+
+	switch (mop->Code)
+	{
+		case 0:
+		case 2:
+
+			ManSize = mop->BufferSize + 6;
+
+			if (mop->Code == 0)
+				ManSize += 4;
+
+			if (*BufferSize < ManSize)
+			{
+				*BufferSize = ManSize;
+				return 2;
+			}
+
+			memcpy(&byte[1], &mop->MemLoad.LoadNum, 5);
+
+			Offset += 5;
+
+			memcpy(&byte[Offset], mop->MemLoad.DataImage, mop->BufferSize);
+
+			Offset += mop->BufferSize;
+
+			if (mop->Code == 0)
+			{
+
+				memcpy(&byte[Offset], mop->MemLoad.TransferAddr, 4);
+
+				Offset += 4;
+			}
+
+			*BufferSize = Offset;
+
+		break;
+
+		case 4:
+
+			if (*BufferSize < 7)
+			{
+				*BufferSize = 7;
+				return 2;
+			}
+
+			memcpy(&byte[1], &mop->MemDump, 6);
+			*BufferSize = 7;
+
+			break;
+
+		case 6:
+
+			if (*BufferSize < 5)
+			{
+				*BufferSize = 5;
+				return 2;
+			}
+
+			memcpy(&byte[1], &mop->Enter_MOP_Mode, 4);
+			*BufferSize = 5;
+
+			break;
+
+		case 8:
+
+			if (*BufferSize < mop->BufferSize + 4)
+			{
+				*BufferSize = mop->BufferSize + 4;
+				return 2;
+			}
+
+			memcpy(&byte[1], &mop->RequestProgram, 3);
+
+			Offset = 4;
+
+			if (mop->BufferSize > 0)
+			{
+				memcpy(&byte[Offset], mop->RequestProgram.SoftID, mop->BufferSize);
+				Offset += mop->BufferSize;
+			}
+
+			*BufferSize = Offset;
+
+			break;
+
+		case 10:
+
+			if (*BufferSize < 3)
+			{
+				*BufferSize = 3;
+				return 2;
+			}
+
+			memcpy(&byte[1], &mop->Request_MemoryLoad, 3);
+
+			*BufferSize = 3;
+
+			break;
+
+		case 12:
+
+			if (*BufferSize < 8)
+			{
+				*BufferSize = 8;
+				return 2;
+			}
+
+			memcpy(&byte[1], &mop->ModeRunning, 7);
+
+			*BufferSize = 8;
+
+			break;
+
+		case 14 :
+
+			if (*BufferSize < 5 + mop->BufferSize)
+			{
+				*BufferSize = 5 + mop->BufferSize;
+				return 2;
+			}
+			memcpy(&byte[1], mop->MemDumpData.MemAddr, 4);
+			
+			if (mop->BufferSize > 0 && mop->MemDumpData.DataImage !=NULL)
+			{
+				memcpy(&byte[5], mop->MemDumpData.DataImage, mop->BufferSize);
+				*BufferSize = 5 + mop->BufferSize;
+			}
+
+			break;
+
+		case 16:
+		case 18:
+
+			if (*BufferSize < 1 + mop->BufferSize)
+			{
+				*BufferSize = 1 + mop->BufferSize;
+				return 2;
+			}
+
+			if (mop->BufferSize > 0 && mop->Remote11.Message != NULL)
+			{
+				memcpy(&byte[1], mop->Remote11.Message, mop->BufferSize);
+				*BufferSize = 1 + mop->BufferSize;
+			}
+
+			break;
+
+		case 20:
+
+			if (*BufferSize < 6 && mop->BufferSize == 0 )
+			{
+				*BufferSize  = 6;
+				return 2;
+			}
+			else if (*BufferSize < 7 + mop->BufferSize && mop->BufferSize > 0)
+			{
+				*BufferSize = 7 + mop->BufferSize;
+				return 2;
+			}
+
+			byte[1] = mop->ParamLoad.LoadNum;
+			Offset = 0;
+
+			if (mop->BufferSize > 0 && mop->ParamLoad.EntryParam != NULL)
+			{
+				Offset = 2;
+				for (i = 0; i < mop->ParamLoad.EntryParamCount; i++)
+				{
+					memcpy(&byte[Offset], &mop->ParamLoad.EntryParam[i], mop->ParamLoad.EntryParam[i].ParLength + 2);
+					Offset += mop->ParamLoad.EntryParam[i].ParLength + 2;
+				}
+			}
+			byte[Offset] = 0x00;
+			memcpy(&byte[Offset +1], mop->ParamLoad.TransferAddr, 4);
+
+			if (Offset > 0)
+				*BufferSize = mop->BufferSize + 7;
+			else *BufferSize = 6;
+
+			break;
+
+		case 24:
+
+			if (*BufferSize < 1 + mop->BufferSize)
+			{
+				*BufferSize = 1 + mop->BufferSize;
+				return 2;
+			}
+
+			if (mop->BufferSize > 0 && mop->LoopbackTest.LoopData != NULL)
+			{
+				memcpy(&byte[1], mop->LoopbackTest.LoopData, mop->BufferSize);
+				*BufferSize = 1 + mop->BufferSize;
+			}
+
+			break;
+
+	}
+
+	return 0;
+}
+
+int ReleaseMop_Header(MOP* mop)
+{
+	if (mop == NULL) return 1;
+
+	if (mop->MemLoad.DataImage != NULL)
+	{
+		delete(mop->MemLoad.DataImage);
+		mop->MemLoad.DataImage = NULL;
+	}
+	if (mop->MemDumpData.DataImage != NULL)
+	{
+		delete(mop->MemDumpData.DataImage);
+		mop->MemDumpData.DataImage = NULL;
+	}
+	if (mop->Remote11.Message != NULL)
+	{
+		delete(mop->Remote11.Message);
+		mop->Remote11.Message = NULL;
+	}
+	if (mop->ParamLoad.EntryParam != NULL)
+	{
+		delete(mop->ParamLoad.EntryParam);
+		mop->ParamLoad.EntryParam = NULL;
+	}
+	if (mop->LoopbackTest.LoopData != NULL)
+	{
+		delete(mop->LoopbackTest.LoopData);
+		mop->LoopbackTest.LoopData = NULL;
+	}
+	if (mop->RequestProgram.SoftID != NULL)
+	{
+		delete(mop->RequestProgram.SoftID);
+		mop->RequestProgram.SoftID = NULL;
+	}
+
+	mop->BufferSize = 0;
+
+	return 0;
+}
+
+int MakeLCP_Header(PVOID Frame, LCP_Prot* lcpProt, int DataSize)
+{
+	if (lcpProt == NULL || Frame == NULL)
+		return 1;
+
+	if (DataSize < 4)
+		return 2;
+
+	memset(lcpProt, 0, sizeof(LCP_Prot));
+
+	lcpProt->Code = ((unsigned char*)Frame)[0];
+	lcpProt->Identifier = ((unsigned char*)Frame)[1];
+
+	MakeShortNumber(&((unsigned char*)Frame)[2], &lcpProt->Length);
+
+	if (DataSize > 4)
+	{
+		if (lcpProt->Code >= 1 && lcpProt->Code <= 7)
+		{
+			lcpProt->Data_Options = ((unsigned char*)Frame) + 4;
+		}
+		else if (lcpProt->Code == Protocol_Reject)
+		{
+			MakeShortNumber(&((unsigned char*)Frame)[4], &lcpProt->RejectProtocol);
+			lcpProt->Data_Options = ((unsigned char*)Frame) + 6;
+		}
+		else if (lcpProt->Code >= 9 && lcpProt->Code <= 11)
+		{
+			MakeLONGNumber(&((unsigned char*)Frame)[4], &lcpProt->MagicNumber);
+			lcpProt->Data_Options = ((unsigned char*)Frame) + 8;
+		}
+	}
+
+	return 0;
+}
+
+int ConvertLCP_HeaderToBuffer(LCP_Prot* lcpProt, PVOID Buffer, int* BufferSize)
+{
+	unsigned char *byte;
+	int Offset;
+
+	Offset = 0;
+
+	if (lcpProt == NULL || Buffer == NULL || BufferSize == NULL) return 1;
+
+	if (*BufferSize < lcpProt->Length)
+	{
+		*BufferSize = lcpProt->Length;
+		return 2;
+	}
+
+	byte = (unsigned char*)Buffer;
+
+	memcpy(byte, (unsigned char*)lcpProt, 2);
+
+	byte[2] = ((unsigned char*)&lcpProt->Length)[1];
+	byte[3] = ((unsigned char*)&lcpProt->Length)[0];
+
+	Offset += 4;
+
+	if (lcpProt->Length > 4)
+	{
+		if (lcpProt->Code >= 1 && lcpProt->Code <= 7)
+		{
+			if (lcpProt->Data_Options != NULL)
+			{
+				memcpy(&byte[4], lcpProt->Data_Options, lcpProt->Length - 4);
+				Offset += lcpProt->Length - 4;
+			}
+			*BufferSize = Offset;
+			return 0;
+		}
+		else if (lcpProt->Code == Protocol_Reject)
+		{
+			byte[4] = ((unsigned char*)&lcpProt->RejectProtocol)[1];
+			byte[5] = ((unsigned char*)&lcpProt->RejectProtocol)[0];
+
+			Offset += 2;
+
+			if (lcpProt->Data_Options != NULL)
+			{
+				memcpy(&byte[6], lcpProt->Data_Options, lcpProt->Length - 6);
+				Offset += lcpProt->Length - 6;
+			}
+			
+			*BufferSize = Offset;
+			return 0;
+		}
+		else if (lcpProt->Code >= 9 && lcpProt->Code <= 11)
+		{
+			byte[4] = ((unsigned char*)&lcpProt->MagicNumber)[3];
+			byte[5] = ((unsigned char*)&lcpProt->MagicNumber)[2];
+			byte[6] = ((unsigned char*)&lcpProt->MagicNumber)[1];
+			byte[7] = ((unsigned char*)&lcpProt->MagicNumber)[0];
+
+			Offset += 4;
+
+			if (lcpProt->Data_Options != NULL)
+			{
+				memcpy(&byte[8], lcpProt->Data_Options, lcpProt->Length - 8);
+				Offset += lcpProt->Length - 8;
+			}
+
+			*BufferSize = Offset;
+			return 0;
+		}
+
+	}
+
+	*BufferSize = Offset;
+
+	return 0;
+}
+
+/*
+		LCP_Options Type :
+
+		 0 RESERVED
+		 1 Maximum-Receive-Unit
+		 3 Authentication-Protocol
+		 4 Quality-Protocol
+		 5 Magic-Number
+		 7 Protocol-Field-Compression
+		 8 Address-and-Control-Field-Compression
+*/
+
+int MakeLCP_Options_Header(PVOID Frame, LCP_Options* lcpOptions, int DataSize)
+{
+	if (Frame == NULL || lcpOptions == NULL)
+		return 1;
+
+	if (DataSize < 2)
+		return 2;
+
+	memset(lcpOptions, 0, sizeof(LCP_Options));
+
+	lcpOptions->Type = ((unsigned char*)Frame)[0];
+	lcpOptions->Length = ((unsigned char*)Frame)[1];
+
+	if (lcpOptions->Length > DataSize)
+		return 2;
+
+	if (lcpOptions->Type == 1)
+	{
+		if (DataSize < 4 || lcpOptions->Length < 4)
+			return 2;
+
+		MakeShortNumber(&((unsigned char*)Frame)[2], &lcpOptions->Max_Recv_Unit);
+
+	}
+	else if (lcpOptions->Type == 3 || lcpOptions->Type == 4)			
+	{
+		if (DataSize < 4 || lcpOptions->Length < 4)
+			return 2;
+
+		MakeShortNumber(&((unsigned char*)Frame)[2], &lcpOptions->Protocol);
+		
+		if (DataSize > 4 && lcpOptions->Length > 4)
+			lcpOptions->Data = ((unsigned char*)Frame) + 4;
+
+	}
+	else if (lcpOptions->Type == 5)
+	{
+		if (DataSize != 6 || lcpOptions->Length != 6)
+			return 2;
+
+		MakeLONGNumber(&((unsigned char*)Frame)[2], &lcpOptions->MagicNumber);
+	}
+
+	return 0;
+}
+
+int ConvertLCP_Options_HeaderToBuffer(LCP_Options* lcpOptions, PVOID Buffer, int* BufferSize)
+{
+	unsigned char* byte;
+	int Offset;
+
+	Offset = 0;
+
+	if (lcpOptions == NULL || Buffer == NULL || BufferSize == NULL) return 1;
+
+	if (*BufferSize < lcpOptions->Length)
+	{
+		*BufferSize = lcpOptions->Length;
+		return 2;
+	}
+
+	byte = (unsigned char*)Buffer;
+
+	memcpy(byte, (unsigned char*)lcpOptions, 2);
+
+	Offset += 2;
+
+	if (lcpOptions->Length > 2)
+	{
+		if (lcpOptions->Type == 1 && lcpOptions->Length == 4)
+		{
+			byte[2] = ((unsigned char*)&lcpOptions->Max_Recv_Unit)[1];
+			byte[3] = ((unsigned char*)&lcpOptions->Max_Recv_Unit)[0];
+
+			Offset += 2;
+			*BufferSize = Offset;
+			return 0;
+		}
+		else if (lcpOptions->Type == 3 || lcpOptions->Type == 4)
+		{
+			if (lcpOptions->Length >= 4)
+			{
+				byte[2] = ((unsigned char*)&lcpOptions->Protocol)[1];
+				byte[3] = ((unsigned char*)&lcpOptions->Protocol)[0];
+
+				Offset += 2;
+
+				if (lcpOptions->Length > 4  && lcpOptions->Data != NULL)
+				{
+					memcpy(&byte[4], lcpOptions->Data, lcpOptions->Length - 4);
+					Offset += lcpOptions->Length - 4;
+				}
+
+				*BufferSize = Offset;
+				return 0;
+			}
+
+		}
+		else if (lcpOptions->Type == 5)
+		{
+			if (lcpOptions->Length == 6)
+			{
+				byte[2] = ((unsigned char*)&lcpOptions->MagicNumber)[3];
+				byte[3] = ((unsigned char*)&lcpOptions->MagicNumber)[2];
+				byte[4] = ((unsigned char*)&lcpOptions->MagicNumber)[1];
+				byte[5] = ((unsigned char*)&lcpOptions->MagicNumber)[0];
+
+				Offset += 4;
+
+				*BufferSize = Offset;
+				return 0;
+			}
+		}
+
+	}
+
+	*BufferSize = Offset;
+
+	return 0;
+}
+
+int MakePPP_Header(PVOID Frame, PPP_Prot* pppProt, int DataSize)
+{
+	if (pppProt == NULL || Frame == NULL)
+		return 1;
+
+	if (DataSize < 2)
+		return 2;
+	
+	MakeShortNumber(Frame, &pppProt->Protocol);
+
+	if (DataSize > 2)
+	{
+		pppProt->Information = ((unsigned char*)Frame)+2;
+		pppProt->InformationLength = DataSize - 2;
+	}
 
 	return 0;
 }

@@ -404,13 +404,18 @@
 #define IDS_IP_TYPE_142					5142
 #define IDS_IP_TYPE_143					5143
 
-
-
-
-
-
-
-
+#define IDS_LCP_CODE_0					5144				
+#define IDS_LCP_CODE_1					5145
+#define IDS_LCP_CODE_2					5146
+#define IDS_LCP_CODE_3					5147
+#define IDS_LCP_CODE_4					5148
+#define IDS_LCP_CODE_5					5149
+#define IDS_LCP_CODE_6					5150
+#define IDS_LCP_CODE_7					5151
+#define IDS_LCP_CODE_8					5152
+#define IDS_LCP_CODE_9					5153
+#define IDS_LCP_CODE_10					5154
+#define IDS_LCP_CODE_11					5155
 
 
 
@@ -462,6 +467,7 @@ typedef enum Filter_Mode
 	Protocol,
 	MiniportSend,
 	MiniportRreciev
+
 }FilterMode;
 
 

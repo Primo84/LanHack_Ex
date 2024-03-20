@@ -673,12 +673,6 @@ typedef struct _MAAP_Version1
 }MAAP_Ver1;
 
 
-typedef union _AVTPData
-{
-	MAAP_Ver1 MAAP_V1;
-
-}AVTP_Data;
-
 typedef struct MAAP_Protocol				//cd=1
 {
 	unsigned char CD : 1;
@@ -689,7 +683,7 @@ typedef struct MAAP_Protocol				//cd=1
 	unsigned char MAAP_Version : 5;
 	unsigned short MAAP_Size : 11;			 //Payload Size
 	unsigned char StreamID[8];
-	AVTP_Data *Data;
+	MAAP_Ver1 MAAP_V1;
 
 }MAAP_Prot;
 
@@ -911,6 +905,233 @@ typedef struct _TRILL_Prot
 
 
 
+
+/*---------------------------------------------------------
+
+
+				LCP - Logical Control Protocol
+
+
+----------------------------------------------------------*/
+
+typedef enum _LCP_Code
+{
+	Unkown,
+	Configure_Request,
+	Configure_Ack,
+	Configure_Nak,
+	Configure_Reject,
+	Terminate_Request,
+	Terminate_Ack,
+	Code_Reject,
+	Protocol_Reject,
+	Echo_Request,
+	Echo_Reply,
+	Discard_Request
+
+}LCP_Code;
+
+
+typedef struct _LCP_Options
+{
+	unsigned char Type;
+	unsigned char Length;							//Length Configuration Options incl Type Length and Data
+	unsigned short Max_Recv_Unit;					//Present if Type = 1
+	unsigned short Protocol;						//Present if Type = 3 or 4
+	unsigned long MagicNumber;						//Present if Type = 5
+	unsigned char *Data;
+
+}LCP_Options;
+
+typedef struct _LCP_Prot
+{
+	unsigned char Code;
+
+	unsigned char Identifier;
+
+	unsigned short Length;
+
+	unsigned short RejectProtocol; // Present if Code = Protocol_Reject (8)
+
+	unsigned long MagicNumber;	   // Present if Code = Echo_Request or Echo_Reply or Discard_Request (9,10,11)
+
+	unsigned char *Data_Options;	// Contain data or packet or options
+		
+		
+
+}LCP_Prot;
+
+
+/*---------------------------------------------------------
+
+
+				PPP - Point-to-Point Protocol 
+
+
+----------------------------------------------------------*/
+
+
+typedef struct _PPP_Prot
+{
+	unsigned short Protocol;
+	unsigned char *Information;
+	unsigned char *Padding;
+	int InformationLength;
+
+}PPP_Prot;
+
+
+/*---------------------------------------------------------
+
+
+				DDCMP 
+
+
+----------------------------------------------------------*/
+
+
+
+typedef struct _DDCMP_Maintenance
+{
+	unsigned char DLE;						// Message code 0x90
+	unsigned short Count : 14;				// Data field size in octets
+	unsigned char Flags : 2;
+	unsigned char Fill_1;
+	unsigned char Fill_2;
+	unsigned char ADDR;
+	unsigned char BLCK_1[2];
+	unsigned char *Data;
+	unsigned char BLCK_2[2];
+
+}DDCMP_Maint;
+
+
+typedef struct _DDCMP_Data
+{
+	unsigned char SOH;						// Message code 0x81
+	unsigned short Count : 14;				// Data field size in octets
+	unsigned char Flags : 2;				// 0- QSync flag / 1 - Select flag  
+	unsigned char Resp;
+	unsigned char Num;
+	unsigned char ADDR;
+	unsigned char BLCK_1[2];
+	unsigned char *Data;
+	unsigned char BLCK_2[2];
+
+}DDCMP_Data;
+
+
+typedef struct _DDCMP_Control
+{
+	unsigned char ENQ;					//Message code 0x05;
+	unsigned char Type;				// 1-Ack message | 2-Nak message | 3-Rep message | 6-Strt messgae | 7-Stck message
+	unsigned char  Subtype : 6;
+	unsigned char Flags : 2;
+	unsigned char Recvr;
+	unsigned char Sndr;
+	unsigned char ADDR;
+	unsigned char BLCK3[2];
+
+}DDCMP_Control; 
+
+/*---------------------------------------------------------
+
+
+				MOP
+
+
+----------------------------------------------------------*/
+
+typedef struct _ParamEntry					// Param struct fo MOP Param Load / code = 20
+{
+	unsigned char ParType;
+	unsigned char ParLength;
+	unsigned char ParValue[6];
+
+}ParamEntry;
+
+typedef struct _MOP
+{
+	unsigned char Code;
+	int BufferSize;
+
+	struct _MemLoad								//code = 0 - with Tranfer Addres / 2- without Transfer Address
+	{
+		unsigned char LoadNum;
+		unsigned char Loadaddr[4];
+		unsigned char *DataImage;
+		unsigned char TransferAddr[4];
+
+	}MemLoad;
+
+	struct _MemDump								// code = 4 - requset memory dump
+	{
+		unsigned char MemAddr[4];
+		unsigned char NumLocs[2];
+		
+	}MemDump;
+	
+	struct _Enter_MOP_Mode						//code = 6
+	{
+		unsigned char Password[4];
+
+	}Enter_MOP_Mode;
+
+	struct _RequestProgram						//code = 8
+	{
+		unsigned char Devtype;
+		unsigned char MOP_Ver;
+		unsigned char PGMType;
+		unsigned char *SoftID;
+
+	}RequestProgram;
+
+	struct _Request_MemoryLoad					//code = 10
+	{
+		unsigned char LoadNum;
+		unsigned char Error;
+
+	}Request_MemoryLoad;
+
+	struct _ModeRunnig							//code = 12 
+	{
+		unsigned char Devtype;
+		unsigned char MOP_Ver;
+		unsigned char MemSize[4];
+		unsigned char Features;
+
+	}ModeRunning;
+
+	struct _MemDumpData							//code = 14
+	{
+		unsigned char MemAddr[4];
+		unsigned char *DataImage;
+
+	}MemDumpData;
+
+	struct _Remote11							//code = 16 and 18
+	{
+		unsigned char *Message;
+
+	}Remote11;
+
+	struct _ParamLoad							//code = 20
+	{
+		unsigned char LoadNum;
+		ParamEntry *EntryParam;
+		unsigned char TransferAddr[4];
+		int EntryParamCount;
+
+	}ParamLoad;
+
+	struct _LoopbackTest						//code = 24
+	{
+		unsigned char *LoopData;
+
+	}LoopbackTest;
+
+}MOP;
+
 /*---------------------------------------------------------
 
 
@@ -1114,12 +1335,97 @@ int ConvertTRILLHeaderToBuffer(TRILL_Prot* trillProt, PVOID Buffer, int *BufferS
 
 int ReleaseTRILLHeader(TRILL_Prot* trillProt);
 
+/*
 
+
+
+	  -----------------Funkcje protoko³u LCP (Logical Link Control)------------------------------
+
+
+
+*/
+
+
+int MakeLCP_Header(PVOID Frame, LCP_Prot *lcpProt, int DataSize);
+
+int ConvertLCP_HeaderToBuffer(LCP_Prot *lcpProt, PVOID Buffer, int *BufferSize);
+
+int MakeLCP_Options_Header(PVOID Frame, LCP_Options *lcpOptions, int DataSize);
+
+int ConvertLCP_Options_HeaderToBuffer(LCP_Options *lcpOptions, PVOID Buffer, int *BufferSize);
+
+/*
+
+
+
+	  -----------------Funkcje protoko³u PPP------------------------------
+
+
+
+*/
+
+
+int MakePPP_Header(PVOID Frame, PPP_Prot* pppProt, int DataSize);
+
+int MakePPP_ProtText(unsigned short PPP_Protocol, char* Text, int TextLength);
+
+
+/*
+
+
+
+	  -----------------Funkcje protoko³u DDCMP------------------------------
+
+
+
+*/
+
+
+int MakeDDCMP_Maint_Header(PVOID Frame, DDCMP_Maint *DDCMP_M, int DataSize);				//DDCMP Maintenance message. First byte of data buffer = 0x90 / 144 D
+
+int ConvertDDCMP_Maint_HeaderToBuffer(DDCMP_Maint *DDCMP_M, PVOID Buffer, int * BufferSize);
+
+int ReleaseDDCMP_Maint_Header(DDCMP_Maint *DDCMP_M);
+
+
+int MakeDDCMP_Data_Header(PVOID Frame, DDCMP_Data *DDCMP_D, int DataSize);				//DDCMP Data message. First byte of data buffer = 0x81 / 129 D
+
+int ConvertDDCMP_Data_HeaderToBuffer(DDCMP_Data *DDCMP_D, PVOID Buffer, int* BufferSize);
+
+int ReleaseDDCMP_Data_Header(DDCMP_Data *DDCMP_D);
+
+
+
+int MakeDDCMP_Control_Header(PVOID Frame, DDCMP_Control * DDCMP_C, int DataSize);				//DDCMP Control message. First byte of data buffer = 0x05 / 5 D
+
+int ConvertDDCMP_Control_HeaderToBuffer(DDCMP_Control * DDCMP_C, PVOID Buffer, int* BufferSize);
+
+
+
+
+
+
+
+/*
+
+
+
+	  -----------------Funkcje protoko³u MOP------------------------------
+
+
+
+*/
+
+int MakeMOP_Header(PVOID Frame, MOP *mop, int DataSize);
+
+int ConvertMOP_HeaderToBuffer(MOP *mop, PVOID Buffer, int *BufferSize);
+
+int ReleaseMop_Header(MOP* mop);
 
 
 /* 
 
-      
+     
 	  
 	  -----------------Funkcje protoko³u IP------------------------------
 
@@ -1145,7 +1451,7 @@ int MakeIP_Flags_Fragment(unsigned short *FlagsFragment, Flags_Fragment* flags_f
 
 int MakeTCI(unsigned short *__TCI, TCI* Tci);				//Create TCI struct from Buffer
 
-int ConvertTCItoBuffer(TCI* tci, PVOID Buffer);				//Write TCI struct to Buffer
+int ConvertTCItoBuffer(TCI* tci, PVOID Buffer);				//Write TCI struct to Buffer always  2 bytes
 
 /*
 
@@ -1160,11 +1466,11 @@ int MakeEVT_N_SFC(unsigned char FDF, EVTNSFC *evt_n_sfc);
 
 int MakeAVTP_CIP_SPH_Header(PVOID FrameByte, CIP_61883_H *CIP_H, SPH *sph);
 
-int MakeAVTP_ControlHead(PVOID Frame, AVTP_ControlHead* AVTP_CH);
+int MakeAVTP_ControlHead(PVOID Frame, AVTP_ControlHead* AVTP_CH, int BufferSize);
 
-int ConvertAVTPControlHeadertoBuffer(AVTP_ControlHead *avtp, PVOID Buffer);				//Write AVTP Header to buffer
+int ConvertAVTPControlHeadertoBuffer(AVTP_ControlHead *avtp, PVOID Buffer);				//Write AVTP Header to buffer always 12 bytes (not including data)
 
-int ConvertMAAPControlHeadertoBuffer(MAAP_Prot* avtp, PVOID Buffer);					//Write MAAP Header to buffer		
+int ConvertMAAPControlHeadertoBuffer(MAAP_Prot* avtp, PVOID Buffer);					//Write MAAP Header to buffer always 12 bytes (not including data)	
 
 int MakeAVTP_MPEG2_tsHeader(MPEG_2TS* mpg2TS, PVOID Buffer);
 
